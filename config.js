@@ -9,7 +9,7 @@ const AIRTABLE_CONFIG = {
   // 1) ضع هنا الـ Base ID الخاص بقاعدة بياناتك في Airtable
   //    تجده في رابط الـ API الخاص بقاعدتك، يبدأ بحرف "app"
   //    مثال: "appXXXXXXXXXXXXXX"
-  BASE_ID: "BASE_ID: "appSR3i0QyJj5VotR",",
+  BASE_ID: "BASE_ID: "appsR3i0QyJj5VotR",",
 
   // 2) ضع هنا الـ Personal Access Token (يُفضّل أن يكون Read-Only
   //    وله صلاحية وصول على هذه القاعدة فقط)
