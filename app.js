@@ -78,7 +78,14 @@ async function fetchClient(slug) {
 }
 
 async function fetchProperties(slug) {
-  const formula = encodeURIComponent(`{${FIELDS.PROPERTY_CLIENT_SLUG}} = "${slug}"`);
+  // ملاحظة: حقل "Client_Slug (from Clients)" هو حقل Lookup، وقيمته تُرجع
+  // دائماً كمصفوفة حتى لو كانت تحتوي على قيمة واحدة فقط. لذلك لا يمكن مقارنته
+  // مباشرة بـ "=" كما لو كان نصاً عادياً — نستخدم ARRAYJOIN لتحويله إلى نص
+  // أولاً قبل المقارنة. لو غيّرت هذا الحقل ليصبح حقل نص عادي مستقبلاً،
+  // بدّل السطر التالي إلى: `{${FIELDS.PROPERTY_CLIENT_SLUG}} = "${slug}"`
+  const formula = encodeURIComponent(
+    `ARRAYJOIN({${FIELDS.PROPERTY_CLIENT_SLUG}}) = "${slug}"`
+  );
   let url = `${AIRTABLE_API}/${BASE_ID}/${encodeURIComponent(TABLES.PROPERTIES)}?filterByFormula=${formula}`;
 
   // Airtable يرجع 100 سجل كحد أقصى في كل طلب، هذا الجزء يجلب كل الصفحات تلقائياً
