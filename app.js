@@ -203,6 +203,9 @@ function buildPropertyCard(property) {
   const bedrooms = property[FIELDS.PROPERTY_BEDROOMS];
   const bathrooms = property[FIELDS.PROPERTY_BATHROOMS];
   const area = property[FIELDS.PROPERTY_AREA];
+  const offerType = property[FIELDS.PROPERTY_OFFER_TYPE] || "";
+  const description = property[FIELDS.PROPERTY_DESCRIPTION] || "";
+  const status = property[FIELDS.PROPERTY_STATUS] || "";
   const imagesRaw = property[FIELDS.PROPERTY_IMAGES] || "";
 
   // تحويل النص المفصول بفاصلة إلى مصفوفة روابط صور نظيفة
@@ -249,9 +252,22 @@ function buildPropertyCard(property) {
     priceBadge.remove();
   }
 
-  // العنوان والموقع
+  // العنوان والموقع ونوع العرض
   node.querySelector(".title").textContent = title;
-  node.querySelector(".location").textContent = location;
+
+  const locationEl = node.querySelector(".location");
+  if (location) locationEl.textContent = location; else locationEl.remove();
+
+  const offerTypeEl = node.querySelector(".offer-type");
+  if (offerType) offerTypeEl.textContent = offerType; else offerTypeEl.remove();
+
+  // حالة الوحدة (متاح / محجوز / مباع...) كشارة صغيرة بجانب العنوان
+  const statusEl = node.querySelector(".status-badge");
+  if (status) statusEl.textContent = status; else statusEl.remove();
+
+  // الوصف
+  const descriptionEl = node.querySelector(".description");
+  if (description) descriptionEl.textContent = description; else descriptionEl.remove();
 
   // التفاصيل (غرف / حمامات / مساحة)
   const meta = node.querySelector(".meta");
