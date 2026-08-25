@@ -157,9 +157,14 @@
         <span class="price-badge absolute top-3 right-3 theme-bg text-white text-sm font-bold px-3 py-1 rounded-full"></span>
       </div>
       <div class="p-5">
-        <h3 class="title font-display font-bold text-lg mb-1"></h3>
-        <p class="location text-sm text-neutral-400 mb-3"></p>
-        <div class="meta flex items-center gap-4 text-sm text-neutral-500 mb-4"></div>
+        <div class="flex items-center gap-2 mb-1">
+          <h3 class="title font-display font-bold text-lg"></h3>
+          <span class="status-badge text-xs font-medium px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-500"></span>
+        </div>
+        <p class="location text-sm text-neutral-400 mb-1"></p>
+        <p class="offer-type text-xs font-medium theme-text mb-3"></p>
+        <div class="meta flex items-center gap-4 text-sm text-neutral-500 mb-3"></div>
+        <p class="description text-sm text-neutral-500 mb-4 line-clamp-2"></p>
         <a class="card-whatsapp block text-center theme-bg text-white text-sm font-medium py-2.5 rounded-xl hover:opacity-90 transition" target="_blank" rel="noopener">
           استفسر عن هذا العقار
         </a>
@@ -168,7 +173,7 @@
   </template>
 
   <!-- ===== ملفات الإعداد والمنطق ===== -->
-<script src="config.js"></script>
-<script src="app.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
