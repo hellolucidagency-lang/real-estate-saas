@@ -42,13 +42,19 @@ const AIRTABLE_CONFIG = {
     // أو حقل Link to another record يربط بجدول Clients.
     PROPERTY_CLIENT_SLUG: "Client_Slug (from Clients)",
 
-    // حقول جدول العقارات (Table 1) — عدّل الأسماء إذا لزم الأمر
-    PROPERTY_TITLE: "Title",
+    // حقول جدول العقارات (الوحدات العقارية) — مطابقة لأسماء الأعمدة الفعلية
+    PROPERTY_TITLE: "Unit_Code",       // العنوان / الكود
+    PROPERTY_OFFER_TYPE: "Offer_Type", // نوع العرض (بيع / إيجار...)
+    PROPERTY_PRICE: "Price",           // السعر
+    PROPERTY_AREA: "Area",             // المساحة
+    PROPERTY_BEDROOMS: "Bedrooms",     // الغرف
+    PROPERTY_BATHROOMS: "Bathrooms",   // الحمامات
+    PROPERTY_DESCRIPTION: "Description", // الوصف
+    PROPERTY_IMAGES: "Cloudinary_Images", // الصور (نصوص مفصولة بفاصلة)
+    PROPERTY_STATUS: "Status",         // الحالة (متاح / محجوز / مباع...)
+
+    // لا يوجد عندك حقل "Location" حالياً — تُرك هنا احتياطياً فقط.
+    // إذا لم يكن هذا الحقل موجوداً في جدولك فلن يظهر شيء مكانه ولن يسبب أي خطأ.
     PROPERTY_LOCATION: "Location",
-    PROPERTY_PRICE: "Price",
-    PROPERTY_BEDROOMS: "Bedrooms",
-    PROPERTY_BATHROOMS: "Bathrooms",
-    PROPERTY_AREA: "Area",
-    PROPERTY_IMAGES: "Cloudinary_Images", // نصوص مفصولة بفاصلة
   },
 };
