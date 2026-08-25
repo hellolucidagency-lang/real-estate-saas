@@ -9,7 +9,7 @@ const AIRTABLE_CONFIG = {
   // 1) ضع هنا الـ Base ID الخاص بقاعدة بياناتك في Airtable
   //    تجده في رابط الـ API الخاص بقاعدتك، يبدأ بحرف "app"
   //    مثال: "appXXXXXXXXXXXXXX"
-  BASE_ID: "BASE_ID: "appsR3i0QyJj5VotR",",
+  BASE_ID: "appsR3i0QyJj5VotR",
 
   // 2) ضع هنا الـ Personal Access Token (يُفضّل أن يكون Read-Only
   //    وله صلاحية وصول على هذه القاعدة فقط)
@@ -40,7 +40,7 @@ const AIRTABLE_CONFIG = {
     // ⚠️ عدّل هذا الاسم ليطابق اسم الحقل الفعلي عندك.
     // غالباً يكون هذا حقل نصي (Lookup أو Text) يحمل نفس قيمة Client_Slug،
     // أو حقل Link to another record يربط بجدول Clients.
-    PROPERTY_CLIENT_SLUG: "Client_Slug",
+    PROPERTY_CLIENT_SLUG: "Client_Slug (from Clients)",
 
     // حقول جدول العقارات (Table 1) — عدّل الأسماء إذا لزم الأمر
     PROPERTY_TITLE: "Title",
