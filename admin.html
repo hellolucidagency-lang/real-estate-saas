@@ -9,9 +9,10 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     body { font-family: 'Cairo', sans-serif; }
-    .nav-active { background-color: #0d9488; color: #ffffff !important; font-weight: 700; }
-    .nav-inactive { color: #475569; }
-    .nav-inactive:hover { background-color: #f1f5f9; color: #0f172a; }
+    .nav-btn { width: 100%; display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.75rem; border-radius: 0.75rem; text-align: right; transition: all 0.2s; font-size: 0.875rem; }
+    .nav-btn.active { background-color: #0d9488; color: #ffffff !important; font-weight: 700; }
+    .nav-btn:not(.active) { color: #475569; }
+    .nav-btn:not(.active):hover { background-color: #f1f5f9; color: #0f172a; }
     .dropzone-box { border: 2px dashed #cbd5e1; transition: all 0.2s ease; cursor: pointer; }
     .dropzone-box:hover { border-color: #0d9488; background-color: #f0fdfa; }
   </style>
@@ -24,7 +25,7 @@
       <div class="w-16 h-16 bg-teal-50 text-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold">🏢</div>
       <h2 class="text-2xl font-black text-slate-900 mb-1">لوحة التحكم</h2>
       <p class="text-xs text-slate-500 mb-6">أدخل كلمة المرور لإدارة حسابك وموقعك</p>
-      <input type="password" id="admin-pass" placeholder="كلمة المرور" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-center mb-4 focus:ring-2 focus:ring-teal-600 outline-none transition text-sm" />
+      <input type="password" id="admin-pass" placeholder="كلمة المرور" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-center mb-4 focus:ring-2 focus:ring-teal-600 outline-none text-sm" />
       <button onclick="checkPass()" class="w-full bg-teal-600 text-white font-bold py-3.5 rounded-xl hover:bg-teal-700 transition shadow-lg shadow-teal-600/20 text-sm">تسجيل الدخول</button>
       <p id="pass-err" class="text-rose-600 text-xs font-semibold mt-3 hidden">كلمة المرور غير صحيحة</p>
     </div>
@@ -44,31 +45,31 @@
           <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
         </div>
 
-        <nav class="p-4 space-y-1.5 text-sm">
+        <nav class="p-4 space-y-1.5">
           <div class="text-[11px] font-bold text-slate-400 px-3 py-1 uppercase tracking-wider">العقارات والوحدات</div>
-          <button onclick="switchTab('properties-list')" id="nav-properties-list" class="nav-active w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition text-right">
+          <button onclick="switchTab('properties-list')" id="nav-properties-list" class="nav-btn active">
             <span>📋</span> جميع الوحدات والعقارات
           </button>
-          <button onclick="switchTab('properties-add')" id="nav-properties-add" class="nav-inactive w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition text-right">
+          <button onclick="switchTab('properties-add')" id="nav-properties-add" class="nav-btn">
             <span>➕</span> إضافة عقار جديد
           </button>
 
           <div class="text-[11px] font-bold text-slate-400 px-3 pt-4 pb-1 uppercase tracking-wider">إعدادات وهوية الموقع</div>
-          <button onclick="switchTab('settings-general')" id="nav-settings-general" class="nav-inactive w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition text-right">
+          <button onclick="switchTab('settings-general')" id="nav-settings-general" class="nav-btn">
             <span>⚙️</span> الهوية والبيانات العامة
           </button>
-          <button onclick="switchTab('settings-content')" id="nav-settings-content" class="nav-inactive w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition text-right">
+          <button onclick="switchTab('settings-content')" id="nav-settings-content" class="nav-btn">
             <span>✨</span> نصوص الواجهة ومن نحن
           </button>
-          <button onclick="switchTab('settings-seo')" id="nav-settings-seo" class="nav-inactive w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition text-right">
+          <button onclick="switchTab('settings-seo')" id="nav-settings-seo" class="nav-btn">
             <span>🔍</span> تحسين محركات البحث (SEO)
           </button>
-          <button onclick="switchTab('settings-social')" id="nav-settings-social" class="nav-inactive w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition text-right">
+          <button onclick="switchTab('settings-social')" id="nav-settings-social" class="nav-btn">
             <span>🌐</span> وسائل التواصل والموقع
           </button>
 
           <div class="text-[11px] font-bold text-slate-400 px-3 pt-4 pb-1 uppercase tracking-wider">الاشتراك والفوترة</div>
-          <button onclick="switchTab('subscription')" id="nav-subscription" class="nav-inactive w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition text-right">
+          <button onclick="switchTab('subscription')" id="nav-subscription" class="nav-btn">
             <span>💳</span> إدارة الباقة والاشتراك
           </button>
         </nav>
@@ -89,7 +90,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
           <div>
             <h2 class="text-xl font-bold text-slate-900">جميع الوحدات العقارية</h2>
-            <p class="text-xs text-slate-500">إدارة العقارات المنشورة والتعديل عليها أو تنزيل نسخة منها</p>
+            <p class="text-xs text-slate-500">إدارة العقارات المنشورة والتعديل عليها أو تنزيل نسخة إكسيل</p>
           </div>
           <div class="flex items-center gap-3">
             <button onclick="exportToExcel()" class="flex items-center gap-2 bg-emerald-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-emerald-700 transition shadow-sm">
@@ -131,7 +132,7 @@
         <div class="flex items-center justify-between">
           <div>
             <h2 id="prop-form-title" class="text-xl font-bold text-slate-900">إضافة عقار جديد</h2>
-            <p class="text-xs text-slate-500">املأ البيانات لنشر الوحدة على موقعك ومحركات البحث تلقائياً</p>
+            <p class="text-xs text-slate-500">املأ البيانات لنشر الوحدة على موقعك تلقائياً</p>
           </div>
           <button id="cancel-edit-btn" onclick="cancelEditMode()" class="hidden text-xs bg-slate-100 text-slate-600 font-bold px-3 py-1.5 rounded-lg hover:bg-slate-200 transition">
             إلغاء التعديل
@@ -234,14 +235,14 @@
               <label class="block text-xs font-bold mb-1 text-slate-700">اللون الأساسي للبراند (Primary Color)</label>
               <div class="flex items-center gap-3">
                 <input type="color" id="setting-color" value="#0d9488" class="h-10 w-16 rounded border border-slate-200 cursor-pointer" />
-                <span class="text-[11px] text-slate-400">لون الأزرار وعناصر الهوية</span>
+                <span class="text-[11px] text-slate-400">لون الأزرار والهوية</span>
               </div>
             </div>
             <div>
               <label class="block text-xs font-bold mb-1 text-slate-700">اللون الثانوي / الهيدر (Accent Color)</label>
               <div class="flex items-center gap-3">
                 <input type="color" id="setting-accent-color" value="#0f172a" class="h-10 w-16 rounded border border-slate-200 cursor-pointer" />
-                <span class="text-[11px] text-slate-400">لون الهيدر والبادجات الثانوية</span>
+                <span class="text-[11px] text-slate-400">لون الهيدر والبادجات</span>
               </div>
             </div>
           </div>
@@ -314,7 +315,7 @@
       <section id="sec-settings-seo" class="hidden max-w-3xl bg-white p-6 md:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
         <div>
           <h2 class="text-xl font-bold text-slate-900">تحسين محركات البحث (SEO)</h2>
-          <p class="text-xs text-slate-500">تحسين ظهور موقعك في نتائج بحث جوجل ومعاينات المشاركة</p>
+          <p class="text-xs text-slate-500">تحسين ظهور موقعك في نتائج بحث جوجل</p>
         </div>
 
         <form id="seo-form" onsubmit="handleSeoSubmit(event)" class="space-y-4">
@@ -326,16 +327,6 @@
           <div>
             <label class="block text-xs font-bold mb-1 text-slate-700">وصف الموقع (Meta Description)</label>
             <textarea id="seo-desc" rows="3" placeholder="اكتب وصفاً جذاباً يظهر تحت رابط موقعك في جوجل..." class="w-full border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs"></textarea>
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold mb-1 text-slate-700">صورة المعاينة والمشاركة (OG Image / Share Banner)</label>
-            <label for="seo-share-image" class="dropzone-box rounded-2xl p-4 flex flex-col items-center justify-center text-center">
-              <span class="text-xl mb-1">🔗</span>
-              <span class="text-xs font-bold text-slate-700">اضغط لرفع صورة المعاينة للواتساب وفيسبوك</span>
-              <span id="seo-share-image-name" class="text-xs font-bold text-teal-600 mt-1"></span>
-            </label>
-            <input type="file" id="seo-share-image" accept="image/*" class="hidden" onchange="updateFileName(this, 'seo-share-image-name')" />
           </div>
 
           <button type="submit" id="seo-submit-btn" class="w-full bg-teal-600 text-white font-bold py-3.5 rounded-xl hover:bg-teal-700 transition text-xs shadow-lg shadow-teal-600/20">
@@ -440,7 +431,6 @@
       <h3 class="text-lg font-black text-slate-900 mb-1">الدفع عبر InstaPay</h3>
       <p class="text-xs text-slate-500 mb-4">قم بالتحويل أو مسح الكود ثم أرسل الإشعار لتفعيل حسابك فوراً</p>
       
-      <!-- كود الـ QR والبيانات -->
       <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-4">
         <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=Https://ipn.eg/S/bw.balckwhite/instapay/76KcLD" alt="InstaPay QR" class="w-32 h-32 mx-auto rounded-xl border border-slate-200 shadow-sm mb-3" />
         
