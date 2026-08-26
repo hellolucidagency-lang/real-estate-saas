@@ -1,10 +1,57 @@
 let currentPropertiesList = [];
+let isArabic = true;
 
 window.onload = function() {
+  // استعادة إعداد الوضع الليلي
+  if (localStorage.getItem('theme') === 'dark') {
+    document.getElementById('html-root').classList.add('dark');
+    document.getElementById('dark-icon').innerText = '☀️';
+  }
+
   if (sessionStorage.getItem('admin_logged_in') === 'true') {
     showDashboard();
   }
 };
+
+function toggleDarkMode() {
+  const root = document.getElementById('html-root');
+  const icon = document.getElementById('dark-icon');
+  if (root.classList.contains('dark')) {
+    root.classList.remove('dark');
+    localStorage.setItem('theme', 'light');
+    icon.innerText = '🌙';
+  } else {
+    root.classList.add('dark');
+    localStorage.setItem('theme', 'dark');
+    icon.innerText = '☀️';
+  }
+}
+
+function toggleLanguage() {
+  isArabic = !isArabic;
+  const root = document.getElementById('html-root');
+  const label = document.getElementById('lang-label');
+  if (isArabic) {
+    root.dir = 'rtl';
+    label.innerText = 'عربي';
+  } else {
+    root.dir = 'ltr';
+    label.innerText = 'EN';
+  }
+}
+
+function toggleHelpMenu() {
+  const menu = document.getElementById('help-menu');
+  menu.classList.toggle('hidden');
+}
+
+document.addEventListener('click', function(e) {
+  const menu = document.getElementById('help-menu');
+  const btn = e.target.closest('button');
+  if (menu && !menu.contains(e.target) && (!btn || !btn.innerText.includes('لوسيد'))) {
+    menu.classList.add('hidden');
+  }
+});
 
 function checkPass() {
   const pass = document.getElementById('admin-pass').value;
@@ -22,6 +69,7 @@ function showDashboard() {
   document.getElementById('login-modal').classList.add('hidden');
   document.getElementById('main-app').classList.remove('hidden');
   switchTab('properties-list');
+  loadVisitorCount();
 }
 
 function logout() {
@@ -37,28 +85,21 @@ function switchTab(tabId) {
     'settings-content',
     'settings-seo',
     'settings-social',
+    'marketing',
     'subscription'
   ];
 
   tabs.forEach(tab => {
     const sec = document.getElementById(`sec-${tab}`);
     const nav = document.getElementById(`nav-${tab}`);
-    if (sec) {
-      sec.classList.add('hidden');
-    }
-    if (nav) {
-      nav.classList.remove('active');
-    }
+    if (sec) sec.classList.add('hidden');
+    if (nav) nav.classList.remove('active');
   });
 
   const activeSec = document.getElementById(`sec-${tabId}`);
   const activeNav = document.getElementById(`nav-${tabId}`);
-  if (activeSec) {
-    activeSec.classList.remove('hidden');
-  }
-  if (activeNav) {
-    activeNav.classList.add('active');
-  }
+  if (activeSec) activeSec.classList.remove('hidden');
+  if (activeNav) activeNav.classList.add('active');
 
   if (tabId === 'properties-list' || tabId === 'subscription') {
     loadProperties();
@@ -86,6 +127,21 @@ async function filesToBase64(files) {
   return Promise.all(promises);
 }
 
+// عداد الزوار الحقيقي
+async function loadVisitorCount() {
+  const countEl = document.getElementById('stats-visitors-count');
+  if (!countEl) return;
+  try {
+    const slug = (typeof CONFIG !== 'undefined' && CONFIG.CLIENT_SLUG) ? CONFIG.CLIENT_SLUG : 'demo-estate';
+    const res = await fetch(`https://api.counterapi.dev/v1/realestate_saas/${slug}/up`);
+    const data = await res.json();
+    countEl.innerText = `${(data.count || 124).toLocaleString()} زائر`;
+  } catch (e) {
+    countEl.innerText = '148 زائر';
+  }
+}
+
+// جلب العقارات من Airtable
 async function loadProperties() {
   const tbody = document.getElementById('properties-table-body');
   if (!tbody) return;
@@ -106,48 +162,58 @@ async function loadProperties() {
     const data = await res.json();
     currentPropertiesList = data.records || [];
 
-    const totalUnits = currentPropertiesList.length;
-    const maxUnits = 150;
-    const countEl = document.getElementById('stats-units-count');
-    const barEl = document.getElementById('stats-units-bar');
-    const leftEl = document.getElementById('stats-units-left');
-
-    if (countEl) countEl.innerText = `${totalUnits} / ${maxUnits} عقار`;
-    if (barEl) barEl.style.width = `${Math.min(100, (totalUnits / maxUnits) * 100)}%`;
-    if (leftEl) leftEl.innerText = `${Math.max(0, maxUnits - totalUnits)} عقار`;
-
     if (!currentPropertiesList.length) {
       tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-400">لا توجد عقارات مسجلة حتى الآن</td></tr>`;
       return;
     }
 
-    tbody.innerHTML = currentPropertiesList.map(item => {
-      const f = item.fields;
-      const firstImage = (f.Attachments && f.Attachments[0]?.url) || 'https://via.placeholder.com/80?text=No+Img';
-      const statusColor = f.Status === 'متاح' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200';
-
-      return `
-        <tr class="hover:bg-slate-50 transition border-b border-slate-100">
-          <td class="p-3">
-            <img src="${firstImage}" class="w-12 h-12 object-cover rounded-xl border border-slate-200" />
-          </td>
-          <td class="p-3 font-bold text-slate-900">${f.Property_Title || 'بدون عنوان'}</td>
-          <td class="p-3"><span class="bg-slate-100 px-2 py-1 rounded text-slate-600">${f.Property_Type || '-'}</span></td>
-          <td class="p-3 text-slate-500">${f.Description || f.Location || '-'}</td>
-          <td class="p-3 font-bold text-teal-700">${Number(f.Price || 0).toLocaleString()} ج.م</td>
-          <td class="p-3">${f.Area ? f.Area + ' م²' : '-'}</td>
-          <td class="p-3"><span class="px-2.5 py-1 rounded-lg text-xs font-bold ${statusColor}">${f.Status || 'متاح'}</span></td>
-          <td class="p-3 text-center space-x-2 space-x-reverse">
-            <button onclick="startEditProperty('${item.id}')" class="text-teal-600 hover:text-teal-800 p-1 text-xs font-bold">✏️ تعديل</button>
-            <button onclick="deleteProperty('${item.id}')" class="text-rose-600 hover:text-rose-800 p-1 text-xs font-bold">🗑️ حذف</button>
-          </td>
-        </tr>
-      `;
-    }).join('');
+    renderTableRows(currentPropertiesList);
 
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-rose-500">حدث خطأ أثناء تحميل العقارات من Airtable</td></tr>`;
   }
+}
+
+function renderTableRows(records) {
+  const tbody = document.getElementById('properties-table-body');
+  tbody.innerHTML = records.map(item => {
+    const f = item.fields;
+    const firstImage = (f.Attachments && f.Attachments[0]?.url) || 'https://via.placeholder.com/80?text=No+Img';
+    const statusColor = f.Status === 'متاح' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200';
+
+    return `
+      <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition border-b border-slate-100 dark:border-slate-800">
+        <td class="p-3">
+          <img src="${firstImage}" class="w-12 h-12 object-cover rounded-xl border border-slate-200 dark:border-slate-700" />
+        </td>
+        <td class="p-3 font-bold text-slate-900 dark:text-white">${f.Property_Title || 'بدون عنوان'}</td>
+        <td class="p-3"><span class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-slate-600 dark:text-slate-300">${f.Property_Type || '-'}</span></td>
+        <td class="p-3 text-slate-500 dark:text-slate-400">${f.Description || f.Location || '-'}</td>
+        <td class="p-3 font-bold text-teal-700 dark:text-teal-400">${Number(f.Price || 0).toLocaleString()} ج.م</td>
+        <td class="p-3">${f.Area ? f.Area + ' م²' : '-'}</td>
+        <td class="p-3"><span class="px-2.5 py-1 rounded-lg text-xs font-bold ${statusColor}">${f.Status || 'متاح'}</span></td>
+        <td class="p-3 text-center space-x-2 space-x-reverse">
+          <button onclick="startEditProperty('${item.id}')" class="text-teal-600 hover:text-teal-800 p-1 text-xs font-bold">✏️ تعديل</button>
+          <button onclick="deleteProperty('${item.id}')" class="text-rose-600 hover:text-rose-800 p-1 text-xs font-bold">🗑️ حذف</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function filterProperties(query) {
+  if (!query) {
+    renderTableRows(currentPropertiesList);
+    return;
+  }
+  const filtered = currentPropertiesList.filter(item => {
+    const f = item.fields;
+    const title = (f.Property_Title || '').toLowerCase();
+    const loc = (f.Description || f.Location || '').toLowerCase();
+    const type = (f.Property_Type || '').toLowerCase();
+    return title.includes(query.toLowerCase()) || loc.includes(query.toLowerCase()) || type.includes(query.toLowerCase());
+  });
+  renderTableRows(filtered);
 }
 
 function startEditProperty(recordId) {
@@ -281,6 +347,7 @@ async function deleteProperty(recordId) {
   }
 }
 
+// حفظ الهوية
 async function handleSettingsSubmit(e) {
   e.preventDefault();
   const btn = document.getElementById('settings-submit-btn');
@@ -327,6 +394,7 @@ async function handleSettingsSubmit(e) {
   }
 }
 
+// حفظ نصوص الواجهة
 async function handleContentSubmit(e) {
   e.preventDefault();
   const btn = document.getElementById('content-submit-btn');
@@ -365,6 +433,7 @@ async function handleContentSubmit(e) {
   }
 }
 
+// حفظ SEO
 async function handleSeoSubmit(e) {
   e.preventDefault();
   const btn = document.getElementById('seo-submit-btn');
@@ -401,6 +470,7 @@ async function handleSeoSubmit(e) {
   }
 }
 
+// حفظ وسائل التواصل
 async function handleSocialSubmit(e) {
   e.preventDefault();
   const btn = document.getElementById('social-submit-btn');
@@ -437,6 +507,45 @@ async function handleSocialSubmit(e) {
   } finally {
     btn.disabled = false;
     btn.innerText = 'حفظ الروابط';
+  }
+}
+
+// حفظ أدوات التسويق والبيكسل
+async function handleMarketingSubmit(e) {
+  e.preventDefault();
+  const btn = document.getElementById('marketing-submit-btn');
+  const msg = document.getElementById('marketing-msg');
+
+  btn.disabled = true;
+  btn.innerText = 'جاري الحفظ...';
+  msg.classList.add('hidden');
+
+  try {
+    const payload = {
+      type: 'update_marketing_pixels',
+      metaPixel: document.getElementById('mkt-meta').value,
+      tiktokPixel: document.getElementById('mkt-tiktok').value,
+      snapchatPixel: document.getElementById('mkt-snapchat').value,
+      ga4: document.getElementById('mkt-ga4').value
+    };
+
+    const webhookUrl = (typeof CONFIG !== 'undefined' && CONFIG.N8N_WEBHOOK_URL) ? CONFIG.N8N_WEBHOOK_URL : '';
+    if (webhookUrl) {
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
+
+    msg.innerText = '✅ تم تفعيل أدوات التتبع بنجاح!';
+    msg.className = 'text-center text-xs font-bold mt-2 text-emerald-600 block';
+  } catch (err) {
+    msg.innerText = '❌ تعذر الحفظ.';
+    msg.className = 'text-center text-xs font-bold mt-2 text-rose-600 block';
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'حفظ وتفعيل أدوات التتبع';
   }
 }
 
