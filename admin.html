@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>لوحة إضافة عقار</title>
+
+  <!-- هذه الصفحة مخصصة للاستخدام الداخلي فقط، لذلك لا داعي لفهرستها في محركات البحث -->
+  <meta name="robots" content="noindex, nofollow" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    html, body { font-family: 'Tajawal', sans-serif; background-color: #FAF9F6; color: #1C1C1A; }
+    .font-display { font-family: 'Cairo', sans-serif; }
+
+    .spinner {
+      width: 18px; height: 18px; border-radius: 999px;
+      border: 2.5px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .fade-in { animation: fadeIn .35s ease both; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center px-4 py-8">
+
+  <!-- ==========================================================
+       1) شاشة كلمة المرور
+       ⚠️ هذه حماية بسيطة جداً (Client-Side) للاستخدام المؤقت فقط
+       أثناء اختبار الـ MVP — التفاصيل والتحذير المهم موجودين في admin.js
+       ========================================================== -->
+  <div id="password-screen" class="w-full max-w-sm fade-in">
+    <div class="bg-white border border-neutral-200 rounded-2xl p-6 shadow-sm">
+      <h1 class="font-display text-xl font-bold mb-1">لوحة التحكم</h1>
+      <p class="text-sm text-neutral-500 mb-5">أدخل كلمة المرور للمتابعة</p>
+
+      <form id="password-form">
+        <input
+          type="password"
+          id="password-input"
+          placeholder="كلمة المرور"
+          autocomplete="off"
+          class="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-neutral-800"
+        />
+        <p id="password-error" class="hidden text-red-600 text-xs mb-3">كلمة المرور غير صحيحة، حاول مرة أخرى.</p>
+
+        <button type="submit" class="w-full bg-neutral-900 text-white text-sm font-medium py-3 rounded-xl hover:opacity-90 transition mt-2">
+          دخول
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================================
+       2) فورم إضافة عقار (مخفي لحد ما كلمة المرور تتأكد)
+       ========================================================== -->
+  <div id="form-screen" class="hidden w-full max-w-md fade-in">
+    <div class="bg-white border border-neutral-200 rounded-2xl p-6 shadow-sm">
+      <div class="flex items-center justify-between mb-5">
+        <h1 class="font-display text-xl font-bold">إضافة عقار جديد</h1>
+        <button id="logout-btn" type="button" class="text-xs text-neutral-400 hover:text-neutral-700 transition">تسجيل خروج</button>
+      </div>
+
+      <form id="property-form" class="space-y-4">
+
+        <!-- اسم العقار -->
+        <div>
+          <label class="block text-sm font-medium mb-1.5">اسم العقار</label>
+          <input
+            type="text" name="title" required
+            placeholder="مثال: شقة 3 غرف - التجمع الخامس"
+            class="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-800"
+          />
+        </div>
+
+        <!-- السعر -->
+        <div>
+          <label class="block text-sm font-medium mb-1.5">السعر</label>
+          <input
+            type="number" name="price" required min="0" step="any"
+            placeholder="مثال: 2500000"
+            class="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-800"
+          />
+        </div>
+
+        <!-- الحالة -->
+        <div>
+          <label class="block text-sm font-medium mb-1.5">الحالة</label>
+          <select
+            name="status" required
+            class="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-800"
+          >
+            <option value="متاح">متاح</option>
+            <option value="مباع">مباع</option>
+          </select>
+        </div>
+
+        <!-- صورة العقار -->
+        <div>
+          <label class="block text-sm font-medium mb-1.5">صورة العقار</label>
+          <input
+            type="file" name="image" accept="image/*" required
+            id="image-input"
+            class="w-full text-sm border border-dashed border-neutral-300 rounded-xl px-4 py-3 file:ml-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-neutral-100 file:text-sm file:font-medium"
+          />
+          <!-- معاينة مصغّرة للصورة المختارة -->
+          <img id="image-preview" class="hidden mt-3 w-full h-40 object-cover rounded-xl border border-neutral-200" />
+        </div>
+
+        <!-- رسالة نجاح / خطأ -->
+        <p id="form-success" class="hidden text-green-700 text-sm bg-green-50 border border-green-200 rounded-xl px-4 py-3"></p>
+        <p id="form-error" class="hidden text-red-700 text-sm bg-red-50 border border-red-200 rounded-xl px-4 py-3"></p>
+
+        <button
+          type="submit" id="submit-btn"
+          class="w-full bg-neutral-900 text-white text-sm font-medium py-3.5 rounded-xl hover:opacity-90 transition flex items-center justify-center gap-2"
+        >
+          <span id="submit-label">حفظ العقار</span>
+          <span id="submit-spinner" class="spinner hidden"></span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/admin.js"></script>
+</body>
+</html>
