@@ -3,135 +3,142 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>لوحة إضافة عقار</title>
-
-  <!-- هذه الصفحة مخصصة للاستخدام الداخلي فقط، لذلك لا داعي لفهرستها في محركات البحث -->
-  <meta name="robots" content="noindex, nofollow" />
-
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet" />
-
+  <title>لوحة التحكم | إدارة العقارات والهوية</title>
   <script src="https://cdn.tailwindcss.com"></script>
-
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <style>
-    html, body { font-family: 'Tajawal', sans-serif; background-color: #FAF9F6; color: #1C1C1A; }
-    .font-display { font-family: 'Cairo', sans-serif; }
-
-    .spinner {
-      width: 18px; height: 18px; border-radius: 999px;
-      border: 2.5px solid rgba(255,255,255,.4);
-      border-top-color: #fff;
-      animation: spin .7s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .fade-in { animation: fadeIn .35s ease both; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    body { font-family: 'Cairo', sans-serif; }
+    .tab-active { border-bottom: 3px solid #111827; font-weight: 700; color: #111827; }
+    .tab-inactive { color: #6b7280; }
   </style>
 </head>
+<body class="bg-gray-50 min-h-screen text-gray-800">
 
-<body class="min-h-screen flex items-center justify-center px-4 py-8">
-
-  <!-- ==========================================================
-       1) شاشة كلمة المرور
-       ⚠️ هذه حماية بسيطة جداً (Client-Side) للاستخدام المؤقت فقط
-       أثناء اختبار الـ MVP — التفاصيل والتحذير المهم موجودين في admin.js
-       ========================================================== -->
-  <div id="password-screen" class="w-full max-w-sm fade-in">
-    <div class="bg-white border border-neutral-200 rounded-2xl p-6 shadow-sm">
-      <h1 class="font-display text-xl font-bold mb-1">لوحة التحكم</h1>
-      <p class="text-sm text-neutral-500 mb-5">أدخل كلمة المرور للمتابعة</p>
-
-      <form id="password-form">
-        <input
-          type="password"
-          id="password-input"
-          placeholder="كلمة المرور"
-          autocomplete="off"
-          class="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-neutral-800"
-        />
-        <p id="password-error" class="hidden text-red-600 text-xs mb-3">كلمة المرور غير صحيحة، حاول مرة أخرى.</p>
-
-        <button type="submit" class="w-full bg-neutral-900 text-white text-sm font-medium py-3 rounded-xl hover:opacity-90 transition mt-2">
-          دخول
-        </button>
-      </form>
+  <!-- شاشة الدخول -->
+  <div id="login-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center">
+      <h2 class="text-xl font-bold text-gray-900 mb-2">لوحة التحكم</h2>
+      <p class="text-sm text-gray-500 mb-6">أدخل كلمة المرور للمتابعة</p>
+      <input type="password" id="admin-pass" placeholder="كلمة المرور" class="w-full border border-gray-300 rounded-xl px-4 py-3 text-center mb-4 focus:ring-2 focus:ring-gray-800 outline-none" />
+      <button onclick="checkPass()" class="w-full bg-gray-900 text-white font-bold py-3 rounded-xl hover:bg-black transition">دخول</button>
+      <p id="pass-err" class="text-red-600 text-sm mt-3 hidden">كلمة المرور غير صحيحة</p>
     </div>
   </div>
 
-  <!-- ==========================================================
-       2) فورم إضافة عقار (مخفي لحد ما كلمة المرور تتأكد)
-       ========================================================== -->
-  <div id="form-screen" class="hidden w-full max-w-md fade-in">
-    <div class="bg-white border border-neutral-200 rounded-2xl p-6 shadow-sm">
-      <div class="flex items-center justify-between mb-5">
-        <h1 class="font-display text-xl font-bold">إضافة عقار جديد</h1>
-        <button id="logout-btn" type="button" class="text-xs text-neutral-400 hover:text-neutral-700 transition">تسجيل خروج</button>
+  <!-- التطبيق الرئيسي -->
+  <div id="main-app" class="hidden max-w-4xl mx-auto p-4 md:p-8">
+    
+    <!-- الهيدر والتبويبات -->
+    <header class="flex flex-col md:flex-row items-center justify-between border-b border-gray-200 pb-4 mb-6 gap-4">
+      <div>
+        <h1 class="text-2xl font-black text-gray-900">لوحة تحكم المكتب</h1>
+        <p class="text-sm text-gray-500">إدارة العقارات والوحدات وتخصيص هوية الموقع</p>
       </div>
+      <button onclick="logout()" class="text-sm text-red-600 font-semibold hover:underline">تسجيل الخروج</button>
+    </header>
 
-      <form id="property-form" class="space-y-4">
-
-        <!-- اسم العقار -->
-        <div>
-          <label class="block text-sm font-medium mb-1.5">اسم العقار</label>
-          <input
-            type="text" name="title" required
-            placeholder="مثال: شقة 3 غرف - التجمع الخامس"
-            class="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-800"
-          />
-        </div>
-
-        <!-- السعر -->
-        <div>
-          <label class="block text-sm font-medium mb-1.5">السعر</label>
-          <input
-            type="number" name="price" required min="0" step="any"
-            placeholder="مثال: 2500000"
-            class="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-800"
-          />
-        </div>
-
-        <!-- الحالة -->
-        <div>
-          <label class="block text-sm font-medium mb-1.5">الحالة</label>
-          <select
-            name="status" required
-            class="w-full border border-neutral-300 rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-800"
-          >
-            <option value="متاح">متاح</option>
-            <option value="مباع">مباع</option>
-          </select>
-        </div>
-
-        <!-- صورة العقار -->
-        <div>
-          <label class="block text-sm font-medium mb-1.5">صورة العقار</label>
-          <input
-            type="file" name="image" accept="image/*" required
-            id="image-input"
-            class="w-full text-sm border border-dashed border-neutral-300 rounded-xl px-4 py-3 file:ml-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-neutral-100 file:text-sm file:font-medium"
-          />
-          <!-- معاينة مصغّرة للصورة المختارة -->
-          <img id="image-preview" class="hidden mt-3 w-full h-40 object-cover rounded-xl border border-neutral-200" />
-        </div>
-
-        <!-- رسالة نجاح / خطأ -->
-        <p id="form-success" class="hidden text-green-700 text-sm bg-green-50 border border-green-200 rounded-xl px-4 py-3"></p>
-        <p id="form-error" class="hidden text-red-700 text-sm bg-red-50 border border-red-200 rounded-xl px-4 py-3"></p>
-
-        <button
-          type="submit" id="submit-btn"
-          class="w-full bg-neutral-900 text-white text-sm font-medium py-3.5 rounded-xl hover:opacity-90 transition flex items-center justify-center gap-2"
-        >
-          <span id="submit-label">حفظ العقار</span>
-          <span id="submit-spinner" class="spinner hidden"></span>
-        </button>
-      </form>
+    <!-- أزرار التبديل (Tabs) -->
+    <div class="flex border-b border-gray-200 mb-8">
+      <button id="tab-btn-properties" onclick="switchTab('properties')" class="tab-active py-3 px-6 text-sm transition">🏢 إضافة وإدارة العقارات</button>
+      <button id="tab-btn-settings" onclick="switchTab('settings')" class="tab-inactive py-3 px-6 text-sm transition">⚙️ إعدادات وهيكل المكتب</button>
     </div>
+
+    <!-- 1. تبويب العقارات -->
+    <section id="section-properties" class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-200">
+      <h3 class="text-lg font-bold mb-4 text-gray-900">إضافة عقار جديد</h3>
+      <form id="property-form" onsubmit="handlePropertySubmit(event)" class="space-y-4">
+        
+        <div>
+          <label class="block text-sm font-semibold mb-1">اسم / عنوان العقار *</label>
+          <input type="text" id="prop-title" required placeholder="مثال: شقة للبيع في التجمع الخامس فيو جاردن" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-gray-800 outline-none text-sm" />
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-semibold mb-1">المنطقة / الموقع *</label>
+            <input type="text" id="prop-location" required placeholder="مثال: التجمع الخامس، النرجس" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-gray-800 outline-none text-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">السعر (ج.م) *</label>
+            <input type="number" id="prop-price" required placeholder="مثال: 3500000" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-gray-800 outline-none text-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">المساحة (م²) *</label>
+            <input type="number" id="prop-area" required placeholder="مثال: 180" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-gray-800 outline-none text-sm" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-semibold mb-1">عدد الغرف</label>
+            <input type="number" id="prop-rooms" placeholder="مثال: 3" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-gray-800 outline-none text-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">عدد الحمامات</label>
+            <input type="number" id="prop-baths" placeholder="مثال: 2" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-gray-800 outline-none text-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">حالة العقار *</label>
+            <select id="prop-status" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-gray-800 outline-none text-sm bg-white">
+              <option value="متاح">متاح</option>
+              <option value="مباع">مباع / مؤجر</option>
+              <option value="قريباً">قريباً</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold mb-1">صور العقار (يمكن اختيار صور متعددة) *</label>
+          <input type="file" id="prop-images" multiple accept="image/*" required class="w-full border border-dashed border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-gray-800 outline-none" />
+          <p class="text-xs text-gray-500 mt-1">اضغطي مع الاستمرار على Ctrl لتحديد أكثر من صورة في وقت واحد.</p>
+        </div>
+
+        <button type="submit" id="prop-submit-btn" class="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl hover:bg-black transition text-sm">
+          حفظ ونشر العقار
+        </button>
+        <p id="prop-msg" class="text-center text-sm font-semibold mt-2 hidden"></p>
+      </form>
+    </section>
+
+    <!-- 2. تبويب إعدادات الهوية -->
+    <section id="section-settings" class="hidden bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-200">
+      <h3 class="text-lg font-bold mb-4 text-gray-900">هوية وبيانات المكتب</h3>
+      <form id="settings-form" onsubmit="handleSettingsSubmit(event)" class="space-y-4">
+        
+        <div>
+          <label class="block text-sm font-semibold mb-1">اسم المكتب / الشركة العقارية</label>
+          <input type="text" id="setting-agency-name" placeholder="مثال: تراست إستيت للوساطة العقارية" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-gray-800 outline-none text-sm" />
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold mb-1">رقم الواتساب (مع كود الدولة)</label>
+            <input type="text" id="setting-whatsapp" placeholder="مثال: 201012345678" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-gray-800 outline-none text-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">لون السيم الأساسي (Brand Color)</label>
+            <div class="flex items-center gap-3">
+              <input type="color" id="setting-color" value="#0f172a" class="h-10 w-20 rounded border border-gray-300 cursor-pointer" />
+              <span class="text-xs text-gray-500">اختر لون هوية العميل ليتلون به موقعه بالكامل</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold mb-1">لوجو المكتب</label>
+          <input type="file" id="setting-logo" accept="image/*" class="w-full border border-dashed border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-gray-800 outline-none" />
+        </div>
+
+        <button type="submit" id="settings-submit-btn" class="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl hover:bg-black transition text-sm">
+          حفظ إعدادات الهوية
+        </button>
+        <p id="settings-msg" class="text-center text-sm font-semibold mt-2 hidden"></p>
+      </form>
+    </section>
+
   </div>
 
   <script src="config.js"></script>
-<script src="admin.js"></script>
+  <script src="admin.js"></script>
 </body>
 </html>
