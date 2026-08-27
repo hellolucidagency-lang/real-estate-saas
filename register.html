@@ -1,220 +1,127 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>إنشاء موقعك | انضم لمنصة لوسيديا</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوسيديا | إنشاء منصتك الذكية</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <!-- ربط ملف الإعدادات -->
+  <script src="config.js"></script>
   <style>
-    body { font-family: 'Cairo', sans-serif; }
-    .plan-card:hover { border-color: #0d9488; }
+    body { font-family: 'Tajawal', sans-serif; background-color: #f8fafc; }
+    .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-teal-500 selection:text-white">
+<body class="min-h-screen flex items-center justify-center p-4">
 
-  <!-- خلفية جمالية -->
-  <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
-    <div class="absolute -top-40 -right-40 w-96 h-96 bg-teal-600/20 rounded-full blur-3xl"></div>
-    <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl"></div>
-  </div>
-
-  <!-- الهيدر -->
-  <header class="relative z-10 max-w-5xl mx-auto w-full px-6 py-6 flex items-center justify-between">
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 bg-teal-600 rounded-xl flex items-center justify-center text-xl font-black shadow-lg shadow-teal-600/30">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-      </div>
-      <div>
-        <h1 class="text-base font-black text-white">منظومة لوسيديا الذكية</h1>
-        <p class="text-[11px] text-teal-400 font-bold">لإدارة الأعمال المتكاملة</p>
-      </div>
-    </div>
-    <a href="https://wa.me/201111197146?text=مرحباً، لدي استفسار بخصوص الاشتراك في منصة لوسيديا" target="_blank" class="text-xs font-bold text-slate-300 hover:text-white bg-slate-800/80 border border-slate-700 px-4 py-2 rounded-xl transition">
-      💬 تواصل مع المبيعات
-    </a>
-  </header>
-
-  <!-- محتوى التسجيل -->
-  <main class="relative z-10 max-w-2xl mx-auto w-full px-6 py-8">
-    <div class="text-center mb-8">
-      <span class="text-xs font-bold bg-teal-950 text-teal-400 border border-teal-800/60 px-3 py-1 rounded-full">🚀 عرض الإطلاق الخاص</span>
-      <h2 class="text-2xl md:text-4xl font-black text-white mt-3">امتلك موقعك ولوحة تحكمك في دقائق</h2>
-      <p class="text-xs md:text-sm text-slate-400 mt-2">نظام متكامل لإدارة أعمالك، تتبع الزوار والإعلانات، وربط الواتساب والدومين المخصص</p>
+  <div class="glass-card w-full max-w-md rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
+    <!-- Header -->
+    <div class="bg-blue-600 p-8 text-center">
+      <h1 class="text-3xl font-extrabold text-white mb-2">لوسيديا</h1>
+      <p class="text-blue-100 text-sm">أطلق منصتك الاحترافية في 3 دقائق</p>
     </div>
 
-    <div class="bg-slate-800/80 backdrop-blur-xl border border-slate-700/80 rounded-3xl p-6 md:p-8 shadow-2xl">
-      <form id="register-form" onsubmit="handleRegister(event)" class="space-y-4">
+    <!-- Form -->
+    <div class="p-8">
+      <div class="bg-blue-50 text-blue-700 text-xs font-bold px-3 py-2 rounded-lg text-center mb-6">
+        🎉 استمتع بـ 14 يوم تجربة مجانية بالكامل
+      </div>
+
+      <form id="register-form" class="space-y-5">
         
-        <!-- قطاع العمل -->
+        <!-- Sector Selection -->
         <div>
-          <label class="block text-xs font-bold mb-1.5 text-slate-200">مجال عملك (القطاع) *</label>
-          <select id="reg-sector" required class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-teal-500 outline-none text-white transition appearance-none cursor-pointer">
-            <option value="" disabled selected>اختر مجال عملك...</option>
-            <option value="عقارات">لوسيديا عقارات (Real Estate)</option>
-            <option value="محاماة">لوسيديا برو للمحامين (Legal)</option>
-            <option value="عيادات">لوسيديا للعيادات (Clinics)</option>
-            <option value="سيارات">لوسيديا أوتو (Cars)</option>
+          <label class="block text-sm font-bold text-slate-700 mb-1">مجال عملك *</label>
+          <select id="sector" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-slate-700 bg-white">
+            <option value="عقارات">🏢 تسويق عقاري</option>
+            <option value="عيادات">🩺 عيادات ورعاية صحية</option>
+            <option value="محاماة">⚖️ استشارات قانونية ومحاماة</option>
           </select>
         </div>
-        
-        <!-- اسم المكتب -->
+
+        <!-- Business Name -->
         <div>
-          <label class="block text-xs font-bold mb-1.5 text-slate-200">اسم المكتب أو الشركة *</label>
-          <input type="text" id="reg-company" required placeholder="مثال: شركة الصفوة" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-teal-500 outline-none text-white transition" />
+          <label class="block text-sm font-bold text-slate-700 mb-1">اسم الشركة أو العيادة *</label>
+          <input type="text" id="company_name" placeholder="مثال: النور للعقارات / عيادات د. أحمد" required
+            class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-slate-700">
         </div>
 
-        <!-- رابط الموقع المطلوب (Slug) -->
+        <!-- WhatsApp -->
         <div>
-          <label class="block text-xs font-bold mb-1.5 text-slate-200">الرابط المطلوب لموقعك (Slug بالإنجليزي) *</label>
-          <div class="flex items-center bg-slate-900/90 border border-slate-700 rounded-xl px-3 focus-within:ring-2 focus-within:ring-teal-500 transition">
-            <span class="text-xs text-slate-500 select-none font-mono">.hellolucidagency.workers.dev</span>
-            <input type="text" id="reg-slug" required dir="ltr" placeholder="alsafwa" class="w-full bg-transparent py-3 px-2 text-xs outline-none text-teal-400 font-mono font-bold" />
-          </div>
-          <p class="text-[11px] text-slate-500 mt-1">يمكنك لاحقاً ربط دومينك الخاص (مثل alsafwa.com) مجاناً.</p>
+          <label class="block text-sm font-bold text-slate-700 mb-1">رقم الواتساب (لاستقبال الحجوزات) *</label>
+          <input type="tel" id="whatsapp" placeholder="مثال: 01012345678" required
+            class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-slate-700 dir-ltr text-right">
         </div>
 
-        <!-- أرقام الاتصال -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-bold mb-1.5 text-slate-200">رقم الواتساب (لاستقبال العملاء) *</label>
-            <input type="tel" id="reg-whatsapp" required placeholder="مثال: 01012345678" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-teal-500 outline-none text-white transition" />
-          </div>
-          <div>
-            <label class="block text-xs font-bold mb-1.5 text-slate-200">كلمة مرور لوحة التحكم *</label>
-            <input type="password" id="reg-password" required placeholder="اختر كلمة مرور للدخول" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-teal-500 outline-none text-white transition" />
-          </div>
+        <!-- Password -->
+        <div>
+          <label class="block text-sm font-bold text-slate-700 mb-1">كلمة المرور للوحة التحكم *</label>
+          <input type="password" id="password" placeholder="••••••••" required
+            class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-slate-700">
         </div>
 
-        <!-- اختيار الباقة -->
-        <div class="pt-2">
-          <label class="block text-xs font-bold mb-2 text-slate-200">اختر خطة الاشتراك المناسبة:</label>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            
-            <label class="plan-card relative flex flex-col justify-between p-4 bg-slate-900/90 border-2 border-teal-500 rounded-2xl cursor-pointer transition">
-              <div class="flex items-start justify-between">
-                <div class="flex items-center gap-2">
-                  <input type="radio" name="plan" value="الباقة السنوية Pro" checked class="text-teal-600 focus:ring-0" />
-                  <span class="text-xs font-black text-white">السنوية (Pro) ⭐</span>
-                </div>
-                <span class="text-[10px] bg-teal-500 text-slate-950 font-black px-2 py-0.5 rounded-full">وفر 25%</span>
-              </div>
-              <div class="mt-3">
-                <div class="text-lg font-black text-teal-400">7,999 ج.م <span class="text-[11px] text-slate-400 font-normal">/ سنوياً</span></div>
-                <div class="text-[10px] text-slate-400 mt-1">200 منتج/خدمة + ربط دومين مخصص + بيكسل إعلاني</div>
-              </div>
-            </label>
-
-            <label class="plan-card relative flex flex-col justify-between p-4 bg-slate-900/60 border border-slate-700 rounded-2xl cursor-pointer transition">
-              <div class="flex items-start justify-between">
-                <div class="flex items-center gap-2">
-                  <input type="radio" name="plan" value="الباقة الربع سنوية Starter" class="text-teal-600 focus:ring-0" />
-                  <span class="text-xs font-bold text-white">باقة 3 أشهر (Starter)</span>
-                </div>
-              </div>
-              <div class="mt-3">
-                <div class="text-lg font-black text-white">1,499 ج.م <span class="text-[11px] text-slate-400 font-normal">/ 3 أشهر</span></div>
-                <div class="text-[10px] text-slate-400 mt-1">50 منتج/خدمة + لوحة تحكم وواتساب مخصص</div>
-              </div>
-            </label>
-
-          </div>
-        </div>
-
-        <!-- زر الاشتراك -->
-        <button type="submit" id="submit-btn" class="w-full bg-teal-600 text-white font-black py-4 rounded-2xl hover:bg-teal-500 transition shadow-lg shadow-teal-600/30 text-sm mt-4">
-          تأكيد الاشتراك والانتقال للدفع ⚡
+        <button type="submit" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition-all shadow-md mt-4">
+          إنشاء حسابي مجاناً 🚀
         </button>
       </form>
-    </div>
-  </main>
 
-  <!-- نافذة الدفع InstaPay بعد التسجيل -->
-  <div id="payment-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-4 z-50">
-    <div class="bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl max-w-sm w-full p-6 text-center">
-      <div class="w-12 h-12 bg-pink-950 text-pink-500 border border-pink-800 rounded-2xl flex items-center justify-center mx-auto mb-3 text-xl font-black">⚡</div>
-      <h3 class="text-lg font-black text-white mb-1">تم تسجيل حسابك بنجاح!</h3>
-      <p class="text-xs text-slate-400 mb-4">أكمل الدفع عبر InstaPay وسيتم تفعيل موقعك ولوحة تحكمك فوراً</p>
-      
-      <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 mb-4">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=Https://ipn.eg/S/bw.balckwhite/instapay/76KcLD" alt="InstaPay QR" class="w-32 h-32 mx-auto rounded-xl border border-slate-700 mb-3" />
-        
-        <div class="space-y-1 text-right text-xs">
-          <div class="flex justify-between items-center border-b border-slate-800 pb-1">
-            <span class="text-slate-400">عنوان الدفع (IPA):</span>
-            <span class="font-bold text-teal-400 select-all font-mono">bw.balckwhite@instapay</span>
-          </div>
-          <div class="flex justify-between items-center pt-1">
-            <span class="text-slate-400">رقم الهاتف:</span>
-            <span class="font-bold text-teal-400 select-all font-mono">01111197146</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="space-y-2">
-        <a href="https://ipn.eg/S/bw.balckwhite/instapay/76KcLD" target="_blank" class="w-full block bg-pink-600 text-white font-bold py-3 rounded-xl hover:bg-pink-500 transition text-xs shadow-md">
-          فتح تطبيق InstaPay للتحويل المباشر ⚡
-        </a>
-        <a id="wa-notify-btn" href="#" target="_blank" class="w-full block bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-500 transition text-xs shadow-md">
-          إرسال إشعار التحويل عبر واتساب 💬
-        </a>
-      </div>
+      <!-- Loading / Success / Error Messages -->
+      <div id="status-msg" class="hidden mt-4 text-center text-sm font-bold p-3 rounded-lg"></div>
     </div>
   </div>
 
-  <footer class="relative z-10 max-w-5xl mx-auto w-full px-6 py-4 text-center text-xs text-slate-500">
-    جميع الحقوق محفوظة © وكالة لوسيد (Hello Lucid Agency)
-  </footer>
-
-  <script src="config.js"></script>
   <script>
-    async function handleRegister(e) {
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      
       const btn = document.getElementById('submit-btn');
-      btn.disabled = true;
-      btn.innerText = 'جاري إنشاء حسابك...';
-
-      const sector = document.getElementById('reg-sector').value;
-      const company = document.getElementById('reg-company').value.trim();
-      let slug = document.getElementById('reg-slug').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
-      const whatsapp = document.getElementById('reg-whatsapp').value.trim();
-      const password = document.getElementById('reg-password').value.trim();
-      const plan = document.querySelector('input[name="plan"]:checked').value;
-
+      const msgBox = document.getElementById('status-msg');
+      
+      // تجهيز البيانات
       const payload = {
-        type: 'new_client_registration',
-        Sector: sector,
-        companyName: company,
-        clientSlug: slug,
-        whatsapp: whatsapp,
-        password: password,
-        plan: plan,
-        status: 'Pending'
+        type: 'register_client', // الكلمة السحرية اللي n8n مستنيها
+        sector: document.getElementById('sector').value,
+        company_name: document.getElementById('company_name').value,
+        whatsapp: document.getElementById('whatsapp').value,
+        password: document.getElementById('password').value
       };
 
+      // تغيير شكل الزرار
+      btn.innerText = 'جاري التجهيز... ⏳';
+      btn.disabled = true;
+      btn.classList.add('opacity-70');
+      msgBox.classList.add('hidden');
+
       try {
-        const webhookUrl = (typeof CONFIG !== 'undefined' && CONFIG.N8N_WEBHOOK_URL) ? CONFIG.N8N_WEBHOOK_URL : '';
-        if (webhookUrl) {
-          await fetch(webhookUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
+        // إرسال البيانات للـ Webhook
+        const res = await fetch(CONFIG.WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          msgBox.className = 'mt-4 text-center text-sm font-bold p-3 rounded-lg bg-green-50 text-green-700';
+          msgBox.innerText = '✅ تم إنشاء حسابك بنجاح! سيتم تحويلك للوحة التحكم...';
+          msgBox.classList.remove('hidden');
+          
+          // بعد ثانيتين، نحوله لصفحة لوحة التحكم
+          setTimeout(() => {
+            window.location.href = 'admin.html';
+          }, 2000);
+        } else {
+          throw new Error('حدث خطأ في الخادم');
         }
-
-        const waMsg = `مرحباً أستاذة ليلى، اشتركت في لوسيديا (قطاع: ${sector}) لشركة: (${company}) - الرابط: (${slug}) - الخطة: (${plan}). وحولت عبر InstaPay، يرجى التفعيل.`;
-        document.getElementById('wa-notify-btn').href = `https://wa.me/201111197146?text=${encodeURIComponent(waMsg)}`;
-
-        const modal = document.getElementById('payment-modal');
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
       } catch (err) {
-        alert('حدث خطأ أثناء التسجيل، يرجى المحاولة ثانية.');
-      } finally {
+        msgBox.className = 'mt-4 text-center text-sm font-bold p-3 rounded-lg bg-red-50 text-red-700';
+        msgBox.innerText = '❌ حدث خطأ، يرجى المحاولة مرة أخرى.';
+        msgBox.classList.remove('hidden');
+        btn.innerText = 'إنشاء حسابي مجاناً 🚀';
         btn.disabled = false;
-        btn.innerText = 'تأكيد الاشتراك والانتقال للدفع ⚡';
+        btn.classList.remove('opacity-70');
       }
-    }
+    });
   </script>
 </body>
 </html>
