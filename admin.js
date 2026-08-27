@@ -2,14 +2,23 @@ let currentPropertiesList = [];
 let isArabic = true;
 
 window.onload = function() {
-  // استعادة إعداد الوضع الليلي
   if (localStorage.getItem('theme') === 'dark') {
     document.getElementById('html-root').classList.add('dark');
     document.getElementById('dark-icon').innerText = '☀️';
   }
 
+  // دعم الـ Routing من الـ URL Hash (مثل #domain أو #properties-list)
+  const initialHash = window.location.hash.replace('#', '') || 'properties-list';
+
   if (sessionStorage.getItem('admin_logged_in') === 'true') {
-    showDashboard();
+    showDashboard(initialHash);
+  }
+};
+
+window.onhashchange = function() {
+  const currentHash = window.location.hash.replace('#', '') || 'properties-list';
+  if (sessionStorage.getItem('admin_logged_in') === 'true') {
+    switchTab(currentHash, false);
   }
 };
 
@@ -59,16 +68,18 @@ function checkPass() {
   
   if (pass === validPass || pass === '123456') {
     sessionStorage.setItem('admin_logged_in', 'true');
-    showDashboard();
+    const initialHash = window.location.hash.replace('#', '') || 'properties-list';
+    showDashboard(initialHash);
   } else {
     document.getElementById('pass-err').classList.remove('hidden');
   }
 }
 
-function showDashboard() {
+function showDashboard(defaultTab = 'properties-list') {
   document.getElementById('login-modal').classList.add('hidden');
   document.getElementById('main-app').classList.remove('hidden');
-  switchTab('properties-list');
+  switchTab(defaultTab, true);
+  loadClientProfile();
   loadVisitorCount();
 }
 
@@ -77,17 +88,21 @@ function logout() {
   location.reload();
 }
 
-function switchTab(tabId) {
+// تبديل الأقسام وتغيير الرابط في المتصفح (SPA Routing)
+function switchTab(tabId, updateUrl = true) {
   const tabs = [
     'properties-list',
     'properties-add',
     'settings-general',
+    'settings-domain',
     'settings-content',
     'settings-seo',
     'settings-social',
     'marketing',
     'subscription'
   ];
+
+  if (!tabs.includes(tabId)) tabId = 'properties-list';
 
   tabs.forEach(tab => {
     const sec = document.getElementById(`sec-${tab}`);
@@ -100,6 +115,10 @@ function switchTab(tabId) {
   const activeNav = document.getElementById(`nav-${tabId}`);
   if (activeSec) activeSec.classList.remove('hidden');
   if (activeNav) activeNav.classList.add('active');
+
+  if (updateUrl) {
+    history.pushState(null, null, `#${tabId}`);
+  }
 
   if (tabId === 'properties-list' || tabId === 'subscription') {
     loadProperties();
@@ -127,6 +146,53 @@ async function filesToBase64(files) {
   return Promise.all(promises);
 }
 
+// جلب بيانات العميل الحقيقية وتحديث الهيدر والدومين
+async function loadClientProfile() {
+  const slug = (typeof CONFIG !== 'undefined' && CONFIG.CLIENT_SLUG) ? CONFIG.CLIENT_SLUG : 'demo';
+  const defaultDomain = `${slug}.hellolucidagency.workers.dev`;
+  
+  const defEl = document.getElementById('default-domain-text');
+  const defBtn = document.getElementById('default-domain-btn');
+  const topPreview = document.getElementById('top-preview-link');
+
+  if (defEl) defEl.innerText = defaultDomain;
+  if (defBtn) defBtn.href = `https://${defaultDomain}`;
+  if (topPreview) topPreview.href = `https://${defaultDomain}`;
+
+  const baseId = (typeof AIRTABLE_CONFIG !== 'undefined' && AIRTABLE_CONFIG.BASE_ID) || (typeof CONFIG !== 'undefined' && CONFIG.AIRTABLE_BASE_ID);
+  const token = (typeof AIRTABLE_CONFIG !== 'undefined' && AIRTABLE_CONFIG.TOKEN);
+  const clientsTable = encodeURIComponent((typeof AIRTABLE_CONFIG !== 'undefined' && AIRTABLE_CONFIG.TABLES?.CLIENTS) || 'Clients');
+
+  if (!baseId || !token) return;
+
+  try {
+    const res = await fetch(`https://api.airtable.com/v0/${baseId}/${clientsTable}?maxRecords=1`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (data.records && data.records.length > 0) {
+      const client = data.records[0].fields;
+      if (client.Agency_Name) {
+        document.getElementById('sidebar-agency-name').innerText = client.Agency_Name;
+        document.getElementById('setting-agency-name').value = client.Agency_Name;
+      }
+      if (client.Logo && client.Logo[0]?.url) {
+        document.getElementById('sidebar-logo').src = client.Logo[0].url;
+      }
+      if (client.Domain) {
+        document.getElementById('custom-domain-input').value = client.Domain;
+        if (topPreview) topPreview.href = `https://${client.Domain}`;
+      }
+      if (client.Plan) {
+        document.getElementById('sidebar-plan-name').innerText = client.Plan;
+        document.getElementById('plan-title-display').innerText = client.Plan;
+      }
+    }
+  } catch (e) {
+    console.log('Error loading client profile:', e);
+  }
+}
+
 // عداد الزوار الحقيقي
 async function loadVisitorCount() {
   const countEl = document.getElementById('stats-visitors-count');
@@ -141,7 +207,7 @@ async function loadVisitorCount() {
   }
 }
 
-// جلب العقارات من Airtable
+// جلب العقارات وتحديث إحصائيات الوحدات
 async function loadProperties() {
   const tbody = document.getElementById('properties-table-body');
   if (!tbody) return;
@@ -161,6 +227,16 @@ async function loadProperties() {
     });
     const data = await res.json();
     currentPropertiesList = data.records || [];
+
+    const totalUnits = currentPropertiesList.length;
+    const maxUnits = 150;
+    const countEl = document.getElementById('stats-units-count');
+    const barEl = document.getElementById('stats-units-bar');
+    const leftEl = document.getElementById('stats-units-left');
+
+    if (countEl) countEl.innerText = `${totalUnits} / ${maxUnits}`;
+    if (barEl) barEl.style.width = `${Math.min(100, (totalUnits / maxUnits) * 100)}%`;
+    if (leftEl) leftEl.innerText = `${Math.max(0, maxUnits - totalUnits)} عقار`;
 
     if (!currentPropertiesList.length) {
       tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-400">لا توجد عقارات مسجلة حتى الآن</td></tr>`;
@@ -328,26 +404,30 @@ function exportToExcel() {
 async function deleteProperty(recordId) {
   if (!confirm('هل أنت متأكد من رغبتك في حذف هذا العقار؟')) return;
 
+  const webhookUrl = (typeof CONFIG !== 'undefined' && CONFIG.N8N_WEBHOOK_URL) ? CONFIG.N8N_WEBHOOK_URL : '';
   const baseId = (typeof AIRTABLE_CONFIG !== 'undefined' && AIRTABLE_CONFIG.BASE_ID) || (typeof CONFIG !== 'undefined' && CONFIG.AIRTABLE_BASE_ID);
   const token = (typeof AIRTABLE_CONFIG !== 'undefined' && AIRTABLE_CONFIG.TOKEN);
   const tableName = encodeURIComponent((typeof AIRTABLE_CONFIG !== 'undefined' && AIRTABLE_CONFIG.TABLES?.PROPERTIES) || 'الوحدات العقارية');
 
   try {
-    const res = await fetch(`https://api.airtable.com/v0/${baseId}/${tableName}/${recordId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (res.ok) {
-      loadProperties();
+    if (webhookUrl) {
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'delete_property', recordId: recordId })
+      });
     } else {
-      alert('تعذر حذف العقار');
+      await fetch(`https://api.airtable.com/v0/${baseId}/${tableName}/${recordId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
     }
+    loadProperties();
   } catch (err) {
     alert('حدث خطأ أثناء الحذف');
   }
 }
 
-// حفظ الهوية
 async function handleSettingsSubmit(e) {
   e.preventDefault();
   const btn = document.getElementById('settings-submit-btn');
@@ -394,7 +474,42 @@ async function handleSettingsSubmit(e) {
   }
 }
 
-// حفظ نصوص الواجهة
+async function handleDomainSubmit(e) {
+  e.preventDefault();
+  const btn = document.getElementById('domain-submit-btn');
+  const msg = document.getElementById('domain-msg');
+
+  btn.disabled = true;
+  btn.innerText = 'جاري الربط...';
+  msg.classList.add('hidden');
+
+  try {
+    const domainVal = document.getElementById('custom-domain-input').value.trim();
+    const payload = {
+      type: 'update_domain',
+      customDomain: domainVal
+    };
+
+    const webhookUrl = (typeof CONFIG !== 'undefined' && CONFIG.N8N_WEBHOOK_URL) ? CONFIG.N8N_WEBHOOK_URL : '';
+    if (webhookUrl) {
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
+
+    msg.innerText = '✅ تم حفظ وربط الدومين المخصص بنجاح!';
+    msg.className = 'text-center text-xs font-bold mt-2 text-emerald-600 block';
+  } catch (err) {
+    msg.innerText = '❌ تعذر ربط الدومين.';
+    msg.className = 'text-center text-xs font-bold mt-2 text-rose-600 block';
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'حفظ وربط الدومين المخصص';
+  }
+}
+
 async function handleContentSubmit(e) {
   e.preventDefault();
   const btn = document.getElementById('content-submit-btn');
@@ -433,7 +548,6 @@ async function handleContentSubmit(e) {
   }
 }
 
-// حفظ SEO
 async function handleSeoSubmit(e) {
   e.preventDefault();
   const btn = document.getElementById('seo-submit-btn');
@@ -470,7 +584,6 @@ async function handleSeoSubmit(e) {
   }
 }
 
-// حفظ وسائل التواصل
 async function handleSocialSubmit(e) {
   e.preventDefault();
   const btn = document.getElementById('social-submit-btn');
@@ -510,7 +623,6 @@ async function handleSocialSubmit(e) {
   }
 }
 
-// حفظ أدوات التسويق والبيكسل
 async function handleMarketingSubmit(e) {
   e.preventDefault();
   const btn = document.getElementById('marketing-submit-btn');
