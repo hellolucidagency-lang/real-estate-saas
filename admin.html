@@ -3,10 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>لوحة التحكم | إدارة المنصة العقارية</title>
+  <title>لوحة التحكم | إدارة منظومة لوسيديا</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- إضافة مكتبة Lucide للأيقونات الاحترافية -->
+  <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -16,15 +18,19 @@
   <style>
     body { font-family: 'Cairo', sans-serif; transition: background-color 0.3s, color 0.3s; }
     .nav-btn { width: 100%; display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.75rem; border-radius: 0.75rem; text-align: right; transition: all 0.2s; font-size: 0.875rem; }
-    .nav-btn.active { background-color: #0d9488; color: #ffffff !important; font-weight: 700; }
+    .nav-btn.active { background-color: #0f172a; color: #ffffff !important; font-weight: 700; }
     .nav-btn:not(.active) { color: #475569; }
     .nav-btn:not(.active):hover { background-color: #f1f5f9; color: #0f172a; }
+    .dark .nav-btn.active { background-color: #3b82f6; }
     .dark .nav-btn:not(.active) { color: #94a3b8; }
     .dark .nav-btn:not(.active):hover { background-color: #1e293b; color: #f8fafc; }
-    .dropzone-box { border: 2px dashed #cbd5e1; transition: all 0.2s ease; cursor: pointer; }
-    .dropzone-box:hover { border-color: #0d9488; background-color: #f0fdfa; }
+    .dropzone-box { border: 2px dashed #cbd5e1; transition: all 0.2s ease; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; border-radius: 1rem; }
+    .dropzone-box:hover { border-color: #3b82f6; background-color: #eff6ff; }
     .dark .dropzone-box { border-color: #334155; }
-    .dark .dropzone-box:hover { border-color: #14b8a6; background-color: #0f172a; }
+    .dark .dropzone-box:hover { border-color: #3b82f6; background-color: #0f172a; }
+    
+    /* تنسيق خاص لأيقونات Lucide */
+    .lucide { width: 18px; height: 18px; stroke-width: 2; }
   </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-800 dark:text-slate-100">
@@ -32,11 +38,13 @@
   <!-- شاشة الدخول -->
   <div id="login-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
     <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center border border-slate-100 dark:border-slate-800">
-      <div class="w-16 h-16 bg-teal-50 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold">🏢</div>
-      <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-1">لوحة التحكم</h2>
+      <div class="w-16 h-16 bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+        <i data-lucide="shield-check" class="w-8 h-8"></i>
+      </div>
+      <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-1">لوحة تحكم لوسيديا</h2>
       <p class="text-xs text-slate-500 dark:text-slate-400 mb-6">أدخل كلمة المرور لإدارة حسابك وموقعك</p>
-      <input type="password" id="admin-pass" placeholder="كلمة المرور" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-3 text-center mb-4 focus:ring-2 focus:ring-teal-600 outline-none text-sm" />
-      <button onclick="checkPass()" class="w-full bg-teal-600 text-white font-bold py-3.5 rounded-xl hover:bg-teal-700 transition shadow-lg shadow-teal-600/20 text-sm">تسجيل الدخول</button>
+      <input type="password" id="admin-pass" placeholder="كلمة المرور" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-3 text-center mb-4 focus:ring-2 focus:ring-blue-600 outline-none text-sm" />
+      <button onclick="checkPass()" class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-600/20 text-sm">تسجيل الدخول</button>
       <p id="pass-err" class="text-rose-600 text-xs font-semibold mt-3 hidden">كلمة المرور غير صحيحة</p>
     </div>
   </div>
@@ -45,147 +53,161 @@
   <div id="main-app" class="hidden min-h-screen flex flex-col md:flex-row">
     
     <!-- القائمة الجانبية (Sidebar) -->
-    <aside class="w-full md:w-64 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 shadow-sm">
+    <aside class="w-full md:w-64 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 shadow-sm transition-all duration-300 z-50 absolute md:relative -right-full md:right-0 h-full" id="sidebar">
       <div>
         <!-- رأس الشريط الجانبي (بيانات البراند الحقيقية) -->
         <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
           <img id="sidebar-logo" src="https://via.placeholder.com/40" class="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700" />
-          <div class="overflow-hidden">
-            <h1 id="sidebar-agency-name" class="text-sm font-black text-slate-900 dark:text-white truncate">لوحة تحكم المكتب</h1>
-            <p id="sidebar-plan-name" class="text-[11px] text-teal-600 dark:text-teal-400 font-bold">الباقة الاحترافية</p>
+          <div class="overflow-hidden flex-1">
+            <h1 id="sidebar-agency-name" class="text-sm font-black text-slate-900 dark:text-white truncate">لوحة تحكم المنظومة</h1>
+            <p id="sidebar-plan-name" class="text-[11px] text-blue-600 dark:text-blue-400 font-bold">باقة الأعمال</p>
           </div>
+          <button onclick="toggleSidebar()" class="md:hidden p-1 text-slate-500 hover:text-slate-800 dark:hover:text-white">
+            <i data-lucide="x"></i>
+          </button>
         </div>
 
-        <nav class="p-4 space-y-1.5">
-          <div class="text-[11px] font-bold text-slate-400 px-3 py-1 uppercase tracking-wider">العقارات والوحدات</div>
+        <nav class="p-4 space-y-1.5 overflow-y-auto max-h-[calc(100vh-160px)]">
+          <div class="text-[11px] font-bold text-slate-400 px-3 py-1 uppercase tracking-wider" id="nav-group-products">إدارة الخدمات / المنتجات</div>
           <button onclick="switchTab('properties-list')" id="nav-properties-list" class="nav-btn active">
-            <span>📋</span> جميع الوحدات والعقارات
+            <i data-lucide="layout-list"></i> <span id="nav-list-label">جميع العناصر</span>
           </button>
           <button onclick="switchTab('properties-add')" id="nav-properties-add" class="nav-btn">
-            <span>➕</span> إضافة عقار جديد
+            <i data-lucide="plus-circle"></i> <span id="nav-add-label">إضافة عنصر جديد</span>
           </button>
 
           <div class="text-[11px] font-bold text-slate-400 px-3 pt-4 pb-1 uppercase tracking-wider">إعدادات الموقع والهوية</div>
           <button onclick="switchTab('settings-general')" id="nav-settings-general" class="nav-btn">
-            <span>⚙️</span> الهوية والبيانات العامة
+            <i data-lucide="palette"></i> الهوية والبيانات العامة
           </button>
           <button onclick="switchTab('settings-domain')" id="nav-settings-domain" class="nav-btn">
-            <span>🌐</span> رابط الموقع والدومين
+            <i data-lucide="globe"></i> رابط الموقع والدومين
           </button>
           <button onclick="switchTab('settings-content')" id="nav-settings-content" class="nav-btn">
-            <span>✨</span> نصوص الواجهة ومن نحن
+            <i data-lucide="file-text"></i> نصوص الواجهة ومن نحن
           </button>
           <button onclick="switchTab('settings-seo')" id="nav-settings-seo" class="nav-btn">
-            <span>🔍</span> تحسين محركات البحث (SEO)
+            <i data-lucide="search"></i> تحسين محركات البحث (SEO)
           </button>
           <button onclick="switchTab('settings-social')" id="nav-settings-social" class="nav-btn">
-            <span>📱</span> وسائل التواصل والموقع
+            <i data-lucide="share-2"></i> وسائل التواصل والموقع
           </button>
 
           <div class="text-[11px] font-bold text-slate-400 px-3 pt-4 pb-1 uppercase tracking-wider">التسويق والاشتراكات</div>
           <button onclick="switchTab('marketing')" id="nav-marketing" class="nav-btn">
-            <span>📈</span> الربط التسويقي والبيكسل
+            <i data-lucide="pie-chart"></i> الربط التسويقي والبيكسل
           </button>
           <button onclick="switchTab('subscription')" id="nav-subscription" class="nav-btn">
-            <span>💳</span> إدارة الباقة والاشتراك
+            <i data-lucide="credit-card"></i> إدارة الباقة والاشتراك
           </button>
         </nav>
       </div>
 
-      <div class="p-4 border-t border-slate-100 dark:border-slate-800">
+      <div class="p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute bottom-0 w-full">
         <button onclick="logout()" class="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 rounded-xl transition">
-          <span>🚪</span> تسجيل الخروج
+          <i data-lucide="log-out"></i> تسجيل الخروج
         </button>
       </div>
     </aside>
 
+    <!-- غطاء الشفافية للموبايل -->
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/50 z-40 hidden md:hidden"></div>
+
     <!-- المحتوى والشريط العلوي -->
-    <div class="flex-1 flex flex-col min-h-screen">
+    <div class="flex-1 flex flex-col min-h-screen relative w-full overflow-hidden">
       
       <!-- الشريط العلوي (Top Bar) -->
-      <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3 flex items-center justify-between gap-4 sticky top-0 z-40">
+      <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 md:px-6 py-3 flex items-center justify-between gap-2 md:gap-4 sticky top-0 z-30">
+        
+        <!-- زر القائمة للموبايل -->
+        <button onclick="toggleSidebar()" class="md:hidden p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+          <i data-lucide="menu"></i>
+        </button>
+
         <!-- البحث السريع -->
-        <div class="relative max-w-xs w-full hidden sm:block">
-          <input type="text" id="quick-search" oninput="filterProperties(this.value)" placeholder="بحث سريع في العقارات..." class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-4 py-2 text-xs focus:ring-2 focus:ring-teal-600 outline-none text-slate-800 dark:text-white" />
-          <span class="absolute left-2.5 top-2.5 text-slate-400 text-xs">🔍</span>
+        <div class="relative max-w-xs w-full hidden sm:block flex-1">
+          <input type="text" id="quick-search" oninput="filterProperties(this.value)" placeholder="بحث سريع..." class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2 text-xs focus:ring-2 focus:ring-blue-600 outline-none text-slate-800 dark:text-white" />
+          <i data-lucide="search" class="absolute left-3 top-2.5 text-slate-400 w-4 h-4"></i>
         </div>
 
         <!-- الأزرار التفاعلية -->
         <div class="flex items-center gap-2 mr-auto">
           <!-- زر زيارة الموقع المباشر -->
           <a id="top-preview-link" href="#" target="_blank" class="p-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 transition">
-            <span>👁️</span> زيارة موقعك
+            <i data-lucide="external-link" class="w-4 h-4"></i> <span class="hidden md:inline">زيارة الموقع</span>
           </a>
 
           <!-- زر الوضع الليلي -->
-          <button onclick="toggleDarkMode()" class="p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs flex items-center gap-1.5" title="الوضع الليلي">
-            <span id="dark-icon">🌙</span>
-          </button>
-
-          <!-- زر اللغة -->
-          <button onclick="toggleLanguage()" class="p-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5">
-            <span>🇪🇬</span> <span id="lang-label">عربي</span>
+          <button onclick="toggleDarkMode()" class="p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs flex items-center justify-center" title="الوضع الليلي">
+            <i id="dark-icon" data-lucide="moon" class="w-4 h-4"></i>
           </button>
 
           <!-- زر المساعدة والدعم (لوسيد) -->
-          <button onclick="toggleHelpMenu()" class="relative p-2 px-3 rounded-xl bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800 text-xs font-bold flex items-center gap-1.5 hover:bg-teal-100 transition">
-            <span>💬</span> مساعدة لوسيد
-          </button>
+          <div class="relative">
+            <button onclick="toggleHelpMenu()" class="p-2 px-3 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-xs font-bold flex items-center gap-1.5 hover:bg-blue-100 transition">
+              <i data-lucide="help-circle" class="w-4 h-4"></i> <span class="hidden md:inline">الدعم الفني</span>
+            </button>
 
-          <!-- قائمة المساعدة المنسدلة -->
-          <div id="help-menu" class="hidden absolute top-14 left-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-4 w-72 z-50 text-right space-y-3">
-            <div class="border-b border-slate-100 dark:border-slate-700 pb-2">
-              <h4 class="font-bold text-xs text-slate-900 dark:text-white">فريق دعم وكالة لوسيد</h4>
-              <p class="text-[11px] text-slate-400">نحن هنا لمساعدتك في أي استفسار</p>
+            <!-- قائمة المساعدة المنسدلة -->
+            <div id="help-menu" class="hidden absolute top-12 left-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-4 w-64 z-50 text-right space-y-3">
+              <div class="border-b border-slate-100 dark:border-slate-700 pb-2">
+                <h4 class="font-bold text-xs text-slate-900 dark:text-white">فريق دعم لوسيديا</h4>
+                <p class="text-[11px] text-slate-400">نحن هنا لمساعدتك في أي استفسار</p>
+              </div>
+              <a href="mailto:Info@hellolucidagency.com" class="flex items-center gap-2 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 text-xs text-slate-700 dark:text-slate-200 font-semibold transition">
+                <i data-lucide="mail" class="w-4 h-4 text-slate-400"></i> Info@hellolucidagency.com
+              </a>
+              <a href="https://www.facebook.com/share/1F1SmHqad8/?mibextid=wwXIfr" target="_blank" class="flex items-center gap-2 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 text-xs text-blue-600 dark:text-blue-400 font-semibold transition">
+                <i data-lucide="facebook" class="w-4 h-4 text-blue-500"></i> صفحة لوسيديا على فيسبوك
+              </a>
             </div>
-            <a href="mailto:Info@hellolucidagency.com" class="flex items-center gap-2 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 text-xs text-slate-700 dark:text-slate-200 font-semibold transition">
-              <span>📧</span> Info@hellolucidagency.com
-            </a>
-            <a href="https://www.facebook.com/share/1F1SmHqad8/?mibextid=wwXIfr" target="_blank" class="flex items-center gap-2 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 text-xs text-blue-600 dark:text-blue-400 font-semibold transition">
-              <span>📘</span> صفحة وكالة لوسيد على فيسبوك
-            </a>
           </div>
         </div>
       </header>
 
       <!-- المحتوى الرئيسي -->
-      <main class="flex-1 p-4 md:p-8 overflow-y-auto">
+      <main class="flex-1 p-4 md:p-8 overflow-y-auto overflow-x-hidden">
 
-        <!-- 1. قسم جميع العقارات -->
+        <!-- 1. قسم جميع العناصر -->
         <section id="sec-properties-list" class="space-y-6">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
             <div>
-              <h2 class="text-xl font-bold text-slate-900 dark:text-white">جميع الوحدات العقارية</h2>
-              <p class="text-xs text-slate-500 dark:text-slate-400">إدارة العقارات المنشورة والتعديل عليها أو تنزيل نسخة إكسيل</p>
+              <h2 id="list-title" class="text-xl font-bold text-slate-900 dark:text-white">إدارة المنتجات / الخدمات</h2>
+              <p class="text-xs text-slate-500 dark:text-slate-400">إدارة العناصر المنشورة والتعديل عليها أو تنزيل نسخة إكسيل</p>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-3">
               <button onclick="exportToExcel()" class="flex items-center gap-2 bg-emerald-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-emerald-700 transition shadow-sm">
-                <span>📊</span> تصدير إكسيل (Excel)
+                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> تصدير إكسيل
               </button>
-              <button onclick="switchTab('properties-add')" class="flex items-center gap-2 bg-teal-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-teal-700 transition shadow-sm">
-                <span>➕</span> إضافة عقار جديد
+              <button onclick="switchTab('properties-add')" class="flex items-center gap-2 bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-blue-700 transition shadow-sm">
+                <i data-lucide="plus" class="w-4 h-4"></i> <span id="btn-add-label">إضافة جديد</span>
               </button>
             </div>
           </div>
 
           <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             <div class="overflow-x-auto">
-              <table class="w-full text-right text-xs text-slate-600 dark:text-slate-300">
+              <table class="w-full text-right text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">
                 <thead class="bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold border-b border-slate-200 dark:border-slate-700">
                   <tr>
                     <th class="p-4">الصورة</th>
-                    <th class="p-4">عنوان العقار</th>
-                    <th class="p-4">النوع</th>
-                    <th class="p-4">المنطقة</th>
+                    <th class="p-4">العنوان</th>
+                    <th class="p-4">القسم</th>
+                    <th class="p-4" id="th-location">الموقع/التفاصيل</th>
                     <th class="p-4">السعر</th>
-                    <th class="p-4">المساحة</th>
+                    <th class="p-4" id="th-area">المساحة</th>
                     <th class="p-4">الحالة</th>
                     <th class="p-4 text-center">إجراءات</th>
                   </tr>
                 </thead>
                 <tbody id="properties-table-body" class="divide-y divide-slate-100 dark:divide-slate-800">
                   <tr>
-                    <td colspan="8" class="p-8 text-center text-slate-400">جاري تحميل العقارات من قاعدة البيانات...</td>
+                    <td colspan="8" class="p-8 text-center text-slate-400">
+                      <div class="flex flex-col items-center gap-2">
+                        <i data-lucide="loader-2" class="w-6 h-6 animate-spin"></i>
+                        <span>جاري تحميل البيانات من السحابة...</span>
+                      </div>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -193,91 +215,97 @@
           </div>
         </section>
 
-        <!-- 2. قسم إضافة / تعديل عقار -->
+        <!-- 2. قسم إضافة / تعديل عنصر -->
         <section id="sec-properties-add" class="hidden max-w-3xl bg-white dark:bg-slate-900 p-6 md:p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
           <div class="flex items-center justify-between">
             <div>
-              <h2 id="prop-form-title" class="text-xl font-bold text-slate-900 dark:text-white">إضافة عقار جديد</h2>
-              <p class="text-xs text-slate-500 dark:text-slate-400">املأ البيانات لنشر الوحدة على موقعك تلقائياً</p>
+              <h2 id="prop-form-title" class="text-xl font-bold text-slate-900 dark:text-white">إضافة عنصر جديد</h2>
+              <p class="text-xs text-slate-500 dark:text-slate-400">املأ البيانات المطلوبة لنشرها على موقعك</p>
             </div>
-            <button id="cancel-edit-btn" onclick="cancelEditMode()" class="hidden text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold px-3 py-1.5 rounded-lg hover:bg-slate-200 transition">
-              إلغاء التعديل
+            <button id="cancel-edit-btn" onclick="cancelEditMode()" class="hidden text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold px-3 py-1.5 rounded-lg hover:bg-slate-200 transition flex items-center gap-1">
+              <i data-lucide="x" class="w-3 h-3"></i> إلغاء التعديل
             </button>
           </div>
 
           <form id="property-form" onsubmit="handlePropertySubmit(event)" class="space-y-4">
             <input type="hidden" id="edit-record-id" value="" />
+            <!-- حقل مخفي لتخزين القطاع (سيتم تعبئته بواسطة JS) -->
+            <input type="hidden" id="item-sector" value="" />
 
             <div>
-              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">عنوان العقار *</label>
-              <input type="text" id="prop-title" required placeholder="مثال: شقة للبيع في التجمع الخامس فيو جاردن" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs" />
+              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300" id="lbl-title">العنوان *</label>
+              <input type="text" id="prop-title" required placeholder="مثال: استشارة قانونية / شقة للبيع / كشف أسنان" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">نوع العقار *</label>
-                <select id="prop-type" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs">
-                  <option value="شقة">شقة</option>
-                  <option value="فيلا">فيلا</option>
-                  <option value="تاون هاوس">تاون هاوس</option>
-                  <option value="تجاري">تجاري / إداري</option>
-                  <option value="شاليه">شاليه</option>
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300" id="lbl-category">القسم (Category) *</label>
+                <!-- سيتم تعبئة الخيارات بناءً على القطاع بواسطة JS -->
+                <select id="prop-type" required class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs">
+                  <option value="" disabled selected>اختر القسم...</option>
                 </select>
               </div>
               <div>
-                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">نوع العرض *</label>
-                <select id="prop-offer-type" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs">
-                  <option value="للبيع">للبيع</option>
-                  <option value="للإيجار">للإيجار</option>
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300" id="lbl-type">نوع الخدمة/العرض *</label>
+                <select id="prop-offer-type" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs">
+                   <!-- سيتم تعبئته ديناميكياً -->
                 </select>
               </div>
               <div>
-                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">المنطقة / الموقع *</label>
-                <input type="text" id="prop-location" required placeholder="مثال: التجمع الخامس، النرجس" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs" />
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300" id="lbl-location">الموقع / التفاصيل *</label>
+                <input type="text" id="prop-location" required placeholder="معلومة إضافية عن الموقع أو الخدمة" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
               </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">السعر (ج.م) *</label>
-                <input type="number" id="prop-price" required placeholder="مثال: 3500000" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs" />
+                <input type="number" id="prop-price" required placeholder="0" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
               </div>
-              <div>
-                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">المساحة (م²) *</label>
-                <input type="number" id="prop-area" required placeholder="مثال: 180" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs" />
+              
+              <!-- هذه الحقول ستظهر للعقارات فقط -->
+              <div class="real-estate-field">
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">المساحة (م²)</label>
+                <input type="number" id="prop-area" placeholder="مثال: 180" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
               </div>
-              <div>
+              <div class="real-estate-field">
                 <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">عدد الغرف</label>
-                <input type="number" id="prop-rooms" placeholder="مثال: 3" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs" />
+                <input type="number" id="prop-rooms" placeholder="مثال: 3" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
               </div>
-              <div>
+              <div class="real-estate-field">
                 <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">عدد الحمامات</label>
-                <input type="number" id="prop-baths" placeholder="مثال: 2" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs" />
+                <input type="number" id="prop-baths" placeholder="مثال: 2" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
               </div>
             </div>
 
             <div>
-              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">حالة العقار *</label>
-              <select id="prop-status" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs">
-                <option value="متاح">متاح</option>
-                <option value="مباع">مباع / مؤجر</option>
+              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">الحالة *</label>
+              <select id="prop-status" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs">
+                <option value="متاح">متاح / نشط</option>
+                <option value="غير متاح">غير متاح / مكتمل</option>
                 <option value="قريباً">قريباً</option>
               </select>
             </div>
 
+            <!-- إضافة حقل الوصف الذي كان مفقوداً في HTML ولكنه موجود في Airtable -->
             <div>
-              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">صور العقار (اختيار متعدد)</label>
-              <label for="prop-images" class="dropzone-box rounded-2xl p-6 flex flex-col items-center justify-center text-center">
-                <span class="text-2xl mb-1">📸</span>
-                <span class="text-xs font-bold text-slate-700 dark:text-slate-300">اضغط لاختيار أو إسقاط صور العقار</span>
-                <span class="text-[11px] text-slate-400 mt-0.5">يمكنك تحديد عدة صور في وقت واحد</span>
-                <span id="prop-images-name" class="text-xs font-bold text-teal-600 mt-2"></span>
+              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">الوصف (Description)</label>
+              <textarea id="prop-description" rows="3" placeholder="اكتب تفاصيل إضافية هنا..." class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs"></textarea>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">الصور (اختياري)</label>
+              <label for="prop-images" class="dropzone-box bg-slate-50 dark:bg-slate-800/50">
+                <i data-lucide="image-plus" class="w-8 h-8 text-slate-400 mb-2"></i>
+                <span class="text-xs font-bold text-slate-700 dark:text-slate-300">اضغط لاختيار الصور</span>
+                <span class="text-[11px] text-slate-500 mt-1">يمكنك تحديد عدة صور في وقت واحد</span>
+                <span id="prop-images-name" class="text-xs font-bold text-blue-600 mt-2 block w-full text-center truncate px-4"></span>
               </label>
               <input type="file" id="prop-images" multiple accept="image/*" class="hidden" onchange="updateFileName(this, 'prop-images-name')" />
             </div>
 
-            <button type="submit" id="prop-submit-btn" class="w-full bg-teal-600 text-white font-bold py-3.5 rounded-xl hover:bg-teal-700 transition text-xs shadow-lg shadow-teal-600/20">
-              حفظ ونشر العقار
+            <button type="submit" id="prop-submit-btn" class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition text-xs shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2">
+              <i data-lucide="save" class="w-4 h-4"></i> حفظ ونشر
             </button>
             <p id="prop-msg" class="text-center text-xs font-bold mt-2 hidden"></p>
           </form>
@@ -292,50 +320,50 @@
 
           <form id="settings-form" onsubmit="handleSettingsSubmit(event)" class="space-y-4">
             <div>
-              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">اسم المكتب / البراند</label>
-              <input type="text" id="setting-agency-name" placeholder="مثال: لوسيد إستيت للوساطة العقارية" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs" />
+              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">اسم النشاط / البراند</label>
+              <input type="text" id="setting-agency-name" placeholder="مثال: لوسيد إستيت / عيادة د.أحمد / مكتب العدالة" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">اللون الأساسي للبراند (Primary Color)</label>
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">اللون الأساسي (Primary Color)</label>
                 <div class="flex items-center gap-3">
-                  <input type="color" id="setting-color" value="#0d9488" class="h-10 w-16 rounded border border-slate-200 dark:border-slate-700 cursor-pointer" />
+                  <input type="color" id="setting-color" value="#0284c7" class="h-10 w-16 rounded border border-slate-200 dark:border-slate-700 cursor-pointer p-1 bg-white dark:bg-slate-800" />
                   <span class="text-[11px] text-slate-400">لون الأزرار وعناصر الهوية</span>
                 </div>
               </div>
               <div>
-                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">اللون الثانوي / الهيدر (Accent Color)</label>
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">اللون الثانوي (Accent Color)</label>
                 <div class="flex items-center gap-3">
-                  <input type="color" id="setting-accent-color" value="#0f172a" class="h-10 w-16 rounded border border-slate-200 dark:border-slate-700 cursor-pointer" />
+                  <input type="color" id="setting-accent-color" value="#0f172a" class="h-10 w-16 rounded border border-slate-200 dark:border-slate-700 cursor-pointer p-1 bg-white dark:bg-slate-800" />
                   <span class="text-[11px] text-slate-400">لون الهيدر والبادجات</span>
                 </div>
               </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
               <div>
-                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">شعار المكتب (Logo الرئيسي)</label>
-                <label for="setting-logo" class="dropzone-box rounded-2xl p-4 flex flex-col items-center justify-center text-center">
-                  <span class="text-xl mb-1">🖼️</span>
-                  <span class="text-xs font-bold text-slate-700 dark:text-slate-300">اضغط لرفع اللوجو</span>
-                  <span id="setting-logo-name" class="text-xs font-bold text-teal-600 mt-1"></span>
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">شعار المكتب (Logo)</label>
+                <label for="setting-logo" class="dropzone-box bg-slate-50 dark:bg-slate-800/50 p-4">
+                  <i data-lucide="image" class="w-6 h-6 text-slate-400 mb-2"></i>
+                  <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">اضغط لرفع اللوجو</span>
+                  <span id="setting-logo-name" class="text-[10px] font-bold text-blue-600 mt-1 truncate max-w-full px-2"></span>
                 </label>
                 <input type="file" id="setting-logo" accept="image/*" class="hidden" onchange="updateFileName(this, 'setting-logo-name')" />
               </div>
               <div>
-                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">أيقونة المتصفح (Favicon المربعة)</label>
-                <label for="setting-favicon" class="dropzone-box rounded-2xl p-4 flex flex-col items-center justify-center text-center">
-                  <span class="text-xl mb-1">🌐</span>
-                  <span class="text-xs font-bold text-slate-700 dark:text-slate-300">اضغط لرفع الأيقونة</span>
-                  <span id="setting-favicon-name" class="text-xs font-bold text-teal-600 mt-1"></span>
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">أيقونة المتصفح (Favicon)</label>
+                <label for="setting-favicon" class="dropzone-box bg-slate-50 dark:bg-slate-800/50 p-4">
+                  <i data-lucide="app-window" class="w-6 h-6 text-slate-400 mb-2"></i>
+                  <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">اضغط لرفع الأيقونة</span>
+                  <span id="setting-favicon-name" class="text-[10px] font-bold text-blue-600 mt-1 truncate max-w-full px-2"></span>
                 </label>
                 <input type="file" id="setting-favicon" accept="image/*" class="hidden" onchange="updateFileName(this, 'setting-favicon-name')" />
               </div>
             </div>
 
-            <button type="submit" id="settings-submit-btn" class="w-full bg-teal-600 text-white font-bold py-3.5 rounded-xl hover:bg-teal-700 transition text-xs shadow-lg shadow-teal-600/20">
-              حفظ إعدادات الهوية
+            <button type="submit" id="settings-submit-btn" class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition text-xs shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 mt-4">
+              <i data-lucide="save" class="w-4 h-4"></i> حفظ إعدادات الهوية
             </button>
             <p id="settings-msg" class="text-center text-xs font-bold mt-2 hidden"></p>
           </form>
@@ -351,11 +379,13 @@
           <!-- كارت الدومين الافتراضي -->
           <div class="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <span class="text-[10px] font-bold bg-teal-50 dark:bg-teal-950 text-teal-600 dark:text-teal-400 px-2 py-0.5 rounded-md">الدومين الافتراضي المجاني</span>
-              <p id="default-domain-text" class="text-xs font-bold text-slate-900 dark:text-white mt-1 select-all font-mono">demo.hellolucidagency.workers.dev</p>
+              <span class="text-[10px] font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded-md flex items-center gap-1 w-max">
+                <i data-lucide="link" class="w-3 h-3"></i> الرابط الافتراضي
+              </span>
+              <p id="default-domain-text" class="text-xs font-bold text-slate-900 dark:text-white mt-1 select-all font-mono pl-1">demo.hellolucidagency.workers.dev</p>
             </div>
-            <a id="default-domain-btn" href="#" target="_blank" class="bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-white px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-100 transition">
-              زيارة الرابط 🔗
+            <a id="default-domain-btn" href="#" target="_blank" class="bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 transition flex items-center gap-2 w-full sm:w-auto justify-center">
+               زيارة الرابط <i data-lucide="external-link" class="w-3 h-3"></i>
             </a>
           </div>
 
@@ -363,42 +393,50 @@
           <form id="domain-form" onsubmit="handleDomainSubmit(event)" class="space-y-4 pt-2">
             <div>
               <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">الدومين المخصص (Custom Domain)</label>
-              <input type="text" id="custom-domain-input" placeholder="مثال: trustestate-eg.com" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs font-mono" />
-              <p class="text-[11px] text-slate-400 mt-1">اكتب اسم دومينك الخاص بدون http أو https.</p>
+              <div class="relative">
+                <i data-lucide="globe" class="absolute right-3 top-3 w-4 h-4 text-slate-400"></i>
+                <input type="text" id="custom-domain-input" placeholder="مثال: trust-brand.com" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl pr-10 pl-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs font-mono dir-ltr text-left" />
+              </div>
+              <p class="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
+                <i data-lucide="info" class="w-3 h-3"></i> اكتب اسم دومينك الخاص بدون http أو https.
+              </p>
             </div>
 
-            <!-- جدول شرح سجلات الـ DNS للعميل -->
-            <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 text-xs space-y-2">
-              <h4 class="font-bold text-amber-900 dark:text-amber-300">📋 طريقة توجيه الدومين من شركة النطاقات (GoDaddy / Namecheap):</h4>
-              <p class="text-amber-800 dark:text-amber-200 text-[11px]">توجه إلى لوحة تحكم الدومين الخاص بك وأضف السجلات التالية داخل إدارة الـ DNS:</p>
+            <!-- جدول شرح سجلات الـ DNS -->
+            <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4 text-xs space-y-3">
+              <div class="flex items-center gap-2">
+                <i data-lucide="server" class="w-4 h-4 text-amber-700 dark:text-amber-500"></i>
+                <h4 class="font-bold text-amber-900 dark:text-amber-400">إعدادات DNS (من GoDaddy / Namecheap):</h4>
+              </div>
+              <p class="text-amber-800 dark:text-amber-300 text-[11px]">أضف السجلات التالية في لوحة تحكم الدومين الخاص بك لربطه بالمنصة:</p>
               
-              <div class="overflow-x-auto">
+              <div class="overflow-x-auto rounded-lg border border-amber-200/50 dark:border-amber-800/30">
                 <table class="w-full text-right text-[11px] text-amber-900 dark:text-amber-200 border-collapse">
-                  <thead>
-                    <tr class="border-b border-amber-200 dark:border-amber-800 font-bold">
-                      <th class="p-1.5">النوع (Type)</th>
-                      <th class="p-1.5">المضيف (Host/Name)</th>
-                      <th class="p-1.5">الهدف (Target/Value)</th>
+                  <thead class="bg-amber-100/50 dark:bg-amber-900/30">
+                    <tr class="border-b border-amber-200/50 dark:border-amber-800/50 font-bold">
+                      <th class="p-2">النوع (Type)</th>
+                      <th class="p-2">الاسم (Name)</th>
+                      <th class="p-2">الهدف (Target/Value)</th>
                     </tr>
                   </thead>
                   <tbody class="font-mono">
-                    <tr class="border-b border-amber-200/50 dark:border-amber-800/50">
-                      <td class="p-1.5 font-bold">CNAME</td>
-                      <td class="p-1.5">www</td>
-                      <td class="p-1.5 select-all">real-estate-saas.hellolucidagency.workers.dev</td>
+                    <tr class="border-b border-amber-200/30 dark:border-amber-800/30">
+                      <td class="p-2 font-bold">CNAME</td>
+                      <td class="p-2">www</td>
+                      <td class="p-2 select-all">saas.hellolucidagency.workers.dev</td>
                     </tr>
                     <tr>
-                      <td class="p-1.5 font-bold">CNAME</td>
-                      <td class="p-1.5">@</td>
-                      <td class="p-1.5 select-all">real-estate-saas.hellolucidagency.workers.dev</td>
+                      <td class="p-2 font-bold">CNAME</td>
+                      <td class="p-2">@</td>
+                      <td class="p-2 select-all">saas.hellolucidagency.workers.dev</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </div>
 
-            <button type="submit" id="domain-submit-btn" class="w-full bg-teal-600 text-white font-bold py-3.5 rounded-xl hover:bg-teal-700 transition text-xs shadow-lg shadow-teal-600/20">
-              حفظ وربط الدومين المخصص
+            <button type="submit" id="domain-submit-btn" class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition text-xs shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2">
+              <i data-lucide="link-2" class="w-4 h-4"></i> حفظ وربط الدومين المخصص
             </button>
             <p id="domain-msg" class="text-center text-xs font-bold mt-2 hidden"></p>
           </form>
@@ -408,33 +446,33 @@
         <section id="sec-settings-content" class="hidden max-w-3xl bg-white dark:bg-slate-900 p-6 md:p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
           <div>
             <h2 class="text-xl font-bold text-slate-900 dark:text-white">نصوص الواجهة ومن نحن</h2>
-            <p class="text-xs text-slate-500 dark:text-slate-400">تخصيص الكلمة الافتتاحية والنبذة التعريفية (اختياري)</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">تخصيص الكلمة الافتتاحية والنبذة التعريفية لعملائك</p>
           </div>
 
           <form id="content-form" onsubmit="handleContentSubmit(event)" class="space-y-4">
             <div>
-              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">العنوان الرئيسي في الواجهة (Hero Title)</label>
-              <input type="text" id="hero-title" placeholder="مثال: نبني الثقة قبل أن نبني العقار" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs" />
+              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">العنوان الرئيسي (Hero Title)</label>
+              <input type="text" id="hero-title" placeholder="مثال: شريكك الموثوق في كل خطوة" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
             </div>
 
             <div>
-              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">العنوان الفرعي في الواجهة (Hero Subtitle)</label>
-              <textarea id="hero-subtitle" rows="2" placeholder="مثال: شريكك العقاري الموثوق في البيع والإيجار بأرقى المناطق..." class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs"></textarea>
+              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">العنوان الفرعي / الوصف (Hero Subtitle)</label>
+              <textarea id="hero-subtitle" rows="3" placeholder="اكتب نبذة جذابة عن خدماتك هنا..." class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs"></textarea>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">سنوات الخبرة (مثال: +15 عاماً)</label>
-                <input type="text" id="about-exp" placeholder="+10 سنوات" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs" />
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">نص الإحصائية 1 (مثال: +15 عاماً خبرة)</label>
+                <input type="text" id="about-exp" placeholder="+10 سنوات خبرة" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
               </div>
               <div>
-                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">نسبة رضا العملاء (مثال: 98%)</label>
-                <input type="text" id="about-satisfaction" placeholder="98%" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs" />
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">نص الإحصائية 2 (مثال: 98% رضا العملاء)</label>
+                <input type="text" id="about-satisfaction" placeholder="98% رضا العملاء" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
               </div>
             </div>
 
-            <button type="submit" id="content-submit-btn" class="w-full bg-teal-600 text-white font-bold py-3.5 rounded-xl hover:bg-teal-700 transition text-xs shadow-lg shadow-teal-600/20">
-              حفظ نصوص الواجهة
+            <button type="submit" id="content-submit-btn" class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition text-xs shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 mt-4">
+              <i data-lucide="save" class="w-4 h-4"></i> حفظ نصوص الواجهة
             </button>
             <p id="content-msg" class="text-center text-xs font-bold mt-2 hidden"></p>
           </form>
@@ -444,22 +482,25 @@
         <section id="sec-settings-seo" class="hidden max-w-3xl bg-white dark:bg-slate-900 p-6 md:p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
           <div>
             <h2 class="text-xl font-bold text-slate-900 dark:text-white">تحسين محركات البحث (SEO)</h2>
-            <p class="text-xs text-slate-500 dark:text-slate-400">تحسين ظهور موقعك في نتائج بحث جوجل</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">تحسين ظهور موقعك في نتائج بحث جوجل وجذب المزيد من الزوار</p>
           </div>
 
           <form id="seo-form" onsubmit="handleSeoSubmit(event)" class="space-y-4">
             <div>
               <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">عنوان الموقع في جوجل (Meta Title)</label>
-              <input type="text" id="seo-title" placeholder="مثال: لوسيد إستيت | شقق وفلل للبيع في التجمع وزايد" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs" />
+              <div class="relative">
+                <i data-lucide="text-cursor-input" class="absolute right-3 top-2.5 w-4 h-4 text-slate-400"></i>
+                <input type="text" id="seo-title" placeholder="مثال: لوسيد | خدمات احترافية متكاملة" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl pr-10 pl-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
+              </div>
             </div>
 
             <div>
               <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">وصف الموقع (Meta Description)</label>
-              <textarea id="seo-desc" rows="3" placeholder="اكتب وصفاً جذاباً يظهر تحت رابط موقعك في جوجل..." class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs"></textarea>
+              <textarea id="seo-desc" rows="3" placeholder="اكتب وصفاً جذاباً يحتوي على الكلمات المفتاحية ليظهر تحت رابط موقعك في جوجل..." class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs"></textarea>
             </div>
 
-            <button type="submit" id="seo-submit-btn" class="w-full bg-teal-600 text-white font-bold py-3.5 rounded-xl hover:bg-teal-700 transition text-xs shadow-lg shadow-teal-600/20">
-              حفظ إعدادات الـ SEO
+            <button type="submit" id="seo-submit-btn" class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition text-xs shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 mt-4">
+              <i data-lucide="check-circle" class="w-4 h-4"></i> حفظ إعدادات ה-SEO
             </button>
             <p id="seo-msg" class="text-center text-xs font-bold mt-2 hidden"></p>
           </form>
@@ -468,40 +509,55 @@
         <!-- 7. قسم وسائل التواصل والموقع -->
         <section id="sec-settings-social" class="hidden max-w-3xl bg-white dark:bg-slate-900 p-6 md:p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
           <div>
-            <h2 class="text-xl font-bold text-slate-900 dark:text-white">وسائل التواصل والموقع</h2>
-            <p class="text-xs text-slate-500 dark:text-slate-400">ربط أرقام الاتصال وزر الواتساب العائم وموقع الخريطة</p>
+            <h2 class="text-xl font-bold text-slate-900 dark:text-white">أرقام التواصل والروابط</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">ربط أرقام الاتصال وزر الواتساب العائم وحسابات السوشيال ميديا</p>
           </div>
 
           <form id="social-form" onsubmit="handleSocialSubmit(event)" class="space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">رقم الواتساب (لزر الشات والتواصل)</label>
-                <input type="text" id="social-whatsapp" placeholder="مثال: 201012345678" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs" />
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">رقم الواتساب (لزر المحادثة)</label>
+                <div class="relative">
+                  <i data-lucide="message-circle" class="absolute right-3 top-2.5 w-4 h-4 text-emerald-500"></i>
+                  <input type="text" id="social-whatsapp" placeholder="مثال: 201012345678" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl pr-10 pl-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs font-mono dir-ltr text-left" />
+                </div>
               </div>
               <div>
-                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">رقم الهاتف للاتصال المباشر</label>
-                <input type="text" id="social-phone" placeholder="مثال: 01012345678" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs" />
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">رقم الهاتف (للاتصال المباشر)</label>
+                <div class="relative">
+                  <i data-lucide="phone" class="absolute right-3 top-2.5 w-4 h-4 text-blue-500"></i>
+                  <input type="text" id="social-phone" placeholder="مثال: 01012345678" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl pr-10 pl-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs font-mono dir-ltr text-left" />
+                </div>
               </div>
             </div>
 
             <div>
-              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">رابط موقع المكتب على خرائط جوجل (Google Maps Link)</label>
-              <input type="url" id="social-maps" placeholder="https://maps.google.com/..." class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs" />
+              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">رابط موقع المكتب (Google Maps)</label>
+              <div class="relative">
+                <i data-lucide="map-pin" class="absolute right-3 top-2.5 w-4 h-4 text-rose-500"></i>
+                <input type="url" id="social-maps" placeholder="https://maps.google.com/..." class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl pr-10 pl-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs font-mono dir-ltr text-left" />
+              </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">رابط فيسبوك (Facebook)</label>
-                <input type="url" id="social-facebook" placeholder="https://facebook.com/..." class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs" />
+                <div class="relative">
+                  <i data-lucide="facebook" class="absolute right-3 top-2.5 w-4 h-4 text-blue-600"></i>
+                  <input type="url" id="social-facebook" placeholder="https://facebook.com/..." class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl pr-10 pl-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs font-mono dir-ltr text-left" />
+                </div>
               </div>
               <div>
                 <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">رابط إنستغرام (Instagram)</label>
-                <input type="url" id="social-instagram" placeholder="https://instagram.com/..." class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs" />
+                <div class="relative">
+                  <i data-lucide="instagram" class="absolute right-3 top-2.5 w-4 h-4 text-pink-600"></i>
+                  <input type="url" id="social-instagram" placeholder="https://instagram.com/..." class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl pr-10 pl-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs font-mono dir-ltr text-left" />
+                </div>
               </div>
             </div>
 
-            <button type="submit" id="social-submit-btn" class="w-full bg-teal-600 text-white font-bold py-3.5 rounded-xl hover:bg-teal-700 transition text-xs shadow-lg shadow-teal-600/20">
-              حفظ الروابط
+            <button type="submit" id="social-submit-btn" class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition text-xs shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 mt-4">
+              <i data-lucide="save" class="w-4 h-4"></i> حفظ أرقام التواصل والروابط
             </button>
             <p id="social-msg" class="text-center text-xs font-bold mt-2 hidden"></p>
           </form>
@@ -510,89 +566,127 @@
         <!-- 8. قسم أدوات التسويق والبيكسل -->
         <section id="sec-marketing" class="hidden max-w-3xl bg-white dark:bg-slate-900 p-6 md:p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
           <div>
-            <h2 class="text-xl font-bold text-slate-900 dark:text-white">الربط التسويقي والبيكسل</h2>
-            <p class="text-xs text-slate-500 dark:text-slate-400">ربط معرفات الإعلانات لتتبع زوار الإعلانات والحملات الممولة بدقة</p>
+            <h2 class="text-xl font-bold text-slate-900 dark:text-white">الربط التسويقي (Tracking Pixels)</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">ربط معرفات الإعلانات لتتبع زوار موقعك والحملات الممولة بدقة عالية</p>
           </div>
 
           <form id="marketing-form" onsubmit="handleMarketingSubmit(event)" class="space-y-4">
             <div>
               <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">معرف ميتا بيكسل (Meta Pixel ID)</label>
-              <input type="text" id="mkt-meta" placeholder="مثال: 123456789012345" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs font-mono" />
-              <p class="text-[11px] text-slate-400 mt-1">لتتبع النقرات والتحويلات على إعلانات فيسبوك وإنستغرام.</p>
+              <div class="relative">
+                <i data-lucide="target" class="absolute right-3 top-3 w-4 h-4 text-blue-600"></i>
+                <input type="text" id="mkt-meta" placeholder="مثال: 123456789012345" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl pr-10 pl-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs font-mono dir-ltr text-left" />
+              </div>
+              <p class="text-[10px] text-slate-400 mt-1.5 ml-1 flex items-center gap-1">
+                <i data-lucide="info" class="w-3 h-3"></i> لتتبع التحويلات على إعلانات فيسبوك وإنستغرام.
+              </p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">معرف تيك توك بيكسل (TikTok Pixel ID)</label>
-                <input type="text" id="mkt-tiktok" placeholder="مثال: C1234567890" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs font-mono" />
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">معرف تيك توك (TikTok Pixel)</label>
+                <div class="relative">
+                  <i data-lucide="music" class="absolute right-3 top-3 w-4 h-4 text-slate-800 dark:text-slate-200"></i>
+                  <input type="text" id="mkt-tiktok" placeholder="مثال: C1234567890" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl pr-10 pl-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs font-mono dir-ltr text-left" />
+                </div>
               </div>
               <div>
-                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">معرف سناب شات (Snapchat Pixel ID)</label>
-                <input type="text" id="mkt-snapchat" placeholder="مثال: 12345678-abcd-1234-abcd" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs font-mono" />
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">معرف سناب شات (Snap Pixel)</label>
+                <div class="relative">
+                  <i data-lucide="ghost" class="absolute right-3 top-3 w-4 h-4 text-yellow-500"></i>
+                  <input type="text" id="mkt-snapchat" placeholder="مثال: 12345678-abcd..." class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl pr-10 pl-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs font-mono dir-ltr text-left" />
+                </div>
               </div>
             </div>
 
             <div>
-              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">معرف إحصائيات جوجل (Google Analytics 4 ID)</label>
-              <input type="text" id="mkt-ga4" placeholder="مثال: G-XXXXXXXXXX" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-600 outline-none text-xs font-mono" />
+              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">معرف إحصائيات جوجل (Google Analytics 4)</label>
+              <div class="relative">
+                <i data-lucide="line-chart" class="absolute right-3 top-3 w-4 h-4 text-amber-500"></i>
+                <input type="text" id="mkt-ga4" placeholder="مثال: G-XXXXXXXXXX" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl pr-10 pl-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs font-mono dir-ltr text-left" />
+              </div>
             </div>
 
-            <button type="submit" id="marketing-submit-btn" class="w-full bg-teal-600 text-white font-bold py-3.5 rounded-xl hover:bg-teal-700 transition text-xs shadow-lg shadow-teal-600/20">
-              حفظ وتفعيل أدوات التتبع
+            <button type="submit" id="marketing-submit-btn" class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition text-xs shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 mt-4">
+              <i data-lucide="activity" class="w-4 h-4"></i> حفظ وتفعيل أدوات التتبع
             </button>
             <p id="marketing-msg" class="text-center text-xs font-bold mt-2 hidden"></p>
           </form>
         </section>
 
         <!-- 9. قسم إدارة الباقة والاشتراك -->
-        <section id="sec-subscription" class="hidden max-w-4xl space-y-6">
+        <section id="sec-subscription" class="hidden max-w-5xl space-y-6">
           <div>
             <h2 class="text-xl font-bold text-slate-900 dark:text-white">إدارة الباقة والاشتراك</h2>
-            <p class="text-xs text-slate-500 dark:text-slate-400">تفاصيل خطتك الحالية وتجديد أو ترقية الاشتراك عبر InstaPay</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">تفاصيل خطتك الحالية وتجديد أو ترقية الاشتراك بسهولة</p>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <!-- كارت الخطة -->
-            <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <span class="text-[10px] font-bold text-teal-600 bg-teal-50 dark:bg-teal-950 px-2 py-0.5 rounded-md">الخطة</span>
-              <h3 id="plan-title-display" class="text-base font-black text-slate-900 dark:text-white mt-2">الباقة الاحترافية</h3>
-              <div class="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-xs">
-                <span class="text-slate-400">الحالة:</span>
-                <span class="font-bold text-emerald-600">مفعل ✅</span>
-              </div>
-            </div>
-
-            <!-- كارت استهلاك الوحدات -->
-            <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <span class="text-[10px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded-md">استهلاك الوحدات</span>
-              <h3 id="stats-units-count" class="text-base font-black text-slate-900 dark:text-white mt-2">-- / 150</h3>
-              <div class="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
-                <div id="stats-units-bar" class="bg-blue-600 h-full rounded-full transition-all duration-500" style="width: 10%"></div>
-              </div>
-              <div class="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-xs">
-                <span class="text-slate-400">المتبقي:</span>
-                <span id="stats-units-left" class="font-bold text-slate-900 dark:text-white">-- عقار</span>
-              </div>
-            </div>
-
-            <!-- كارت عداد الزوار الحقيقي -->
-            <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <span class="text-[10px] font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 rounded-md">الزوار الحقيقيين</span>
-              <h3 id="stats-visitors-count" class="text-base font-black text-slate-900 dark:text-white mt-2">-- زائر</h3>
-              <div class="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-xs">
-                <span class="text-slate-400">التتبع:</span>
-                <span class="font-bold text-indigo-600">لحظي 🟢</span>
-              </div>
-            </div>
-
-            <!-- كارت الدفع الفوري -->
-            <div class="bg-gradient-to-br from-teal-700 to-slate-900 p-5 rounded-2xl text-white shadow-lg shadow-teal-700/20 flex flex-col justify-between">
+            <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between h-full">
               <div>
-                <span class="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-md">الدفع والتجديد</span>
-                <h3 class="text-sm font-black mt-1">تجديد أو ترقية</h3>
+                <span class="text-[10px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-md inline-flex items-center gap-1 w-max">
+                  <i data-lucide="award" class="w-3 h-3"></i> الخطة الحالية
+                </span>
+                <h3 id="plan-title-display" class="text-base font-black text-slate-900 dark:text-white mt-3">جاري التحميل...</h3>
               </div>
-              <button onclick="openInstapayModal()" class="w-full bg-white text-teal-900 text-xs font-bold py-2 rounded-xl hover:bg-teal-50 transition mt-3 shadow">
-                InstaPay ⚡
+              <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-xs">
+                <span class="text-slate-500">حالة الحساب:</span>
+                <span class="font-bold text-emerald-600 flex items-center gap-1">
+                  <i data-lucide="check-circle-2" class="w-3 h-3"></i> نشط ومفعل
+                </span>
+              </div>
+            </div>
+
+            <!-- كارت الاستهلاك -->
+            <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between h-full">
+              <div>
+                <span class="text-[10px] font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md inline-flex items-center gap-1 w-max">
+                  <i data-lucide="layers" class="w-3 h-3"></i> استهلاك الباقة
+                </span>
+                <h3 id="stats-items-count" class="text-base font-black text-slate-900 dark:text-white mt-3">-- / --</h3>
+                <div class="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-3 overflow-hidden">
+                  <div id="stats-items-bar" class="bg-indigo-500 h-full rounded-full transition-all duration-700 ease-out" style="width: 0%"></div>
+                </div>
+              </div>
+              <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-xs">
+                <span class="text-slate-500">المتبقي للإضافة:</span>
+                <span id="stats-items-left" class="font-bold text-slate-900 dark:text-white">-- عنصر</span>
+              </div>
+            </div>
+
+            <!-- كارت الزوار -->
+            <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between h-full">
+              <div>
+                <span class="text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-md inline-flex items-center gap-1 w-max">
+                  <i data-lucide="users" class="w-3 h-3"></i> زوار الموقع
+                </span>
+                <div class="flex items-end gap-2 mt-3">
+                  <h3 id="stats-visitors-count" class="text-2xl font-black text-slate-900 dark:text-white leading-none">--</h3>
+                  <span class="text-xs font-bold text-slate-500 mb-0.5">زائر</span>
+                </div>
+              </div>
+              <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-xs">
+                <span class="text-slate-500">التحديث:</span>
+                <span class="font-bold text-amber-600 flex items-center gap-1">
+                  <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                  </span>
+                  لحظي (Live)
+                </span>
+              </div>
+            </div>
+
+            <!-- كارت الدفع -->
+            <div class="bg-gradient-to-br from-blue-700 to-slate-900 p-5 rounded-2xl text-white shadow-lg shadow-blue-700/20 flex flex-col justify-between h-full relative overflow-hidden group">
+              <i data-lucide="zap" class="absolute -right-4 -bottom-4 w-24 h-24 text-white/10 group-hover:scale-110 transition-transform duration-500"></i>
+              <div class="relative z-10">
+                <span class="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-md backdrop-blur-sm">تجديد أو ترقية الباقة</span>
+                <h3 class="text-sm font-black mt-3 leading-snug">حافظ على استمرار أعمالك بدون توقف</h3>
+              </div>
+              <button onclick="openInstapayModal()" class="relative z-10 w-full bg-white text-blue-900 text-xs font-bold py-2.5 rounded-xl hover:bg-blue-50 transition mt-4 shadow flex items-center justify-center gap-2">
+                دفع عبر InstaPay <i data-lucide="zap" class="w-3 h-3 text-blue-600 fill-current"></i>
               </button>
             </div>
           </div>
@@ -603,36 +697,39 @@
   </div>
 
   <!-- Modal الدفع الحقيقي عبر InstaPay -->
-  <div id="instapay-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+  <div id="instapay-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
     <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-sm w-full p-6 text-center border border-slate-100 dark:border-slate-800">
-      <div class="w-12 h-12 bg-pink-50 dark:bg-pink-950 text-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-3 text-xl font-bold">⚡</div>
-      <h3 class="text-lg font-black text-slate-900 dark:text-white mb-1">الدفع عبر InstaPay</h3>
-      <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">قم بالتحويل أو مسح الكود ثم أرسل الإشعار لتفعيل حسابك فوراً</p>
+      <div class="w-12 h-12 bg-purple-50 dark:bg-purple-900/30 text-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-3 text-xl font-bold">
+        <i data-lucide="credit-card" class="w-6 h-6"></i>
+      </div>
+      <h3 class="text-lg font-black text-slate-900 dark:text-white mb-1">الدفع السريع (InstaPay)</h3>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">قم بالتحويل ثم أرسل إشعاراً لتفعيل أو تجديد باقتك</p>
       
-      <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 mb-4">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=Https://ipn.eg/S/bw.balckwhite/instapay/76KcLD" alt="InstaPay QR" class="w-32 h-32 mx-auto rounded-xl border border-slate-200 shadow-sm mb-3" />
+      <div class="bg-slate-50 dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 mb-4">
+        <!-- تأكد من تغيير رابط ה-QR إذا أردت -->
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=Https://ipn.eg/S/bw.balckwhite/instapay/76KcLD" alt="InstaPay QR" class="w-32 h-32 mx-auto rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm mb-3 bg-white p-1" />
         
-        <div class="space-y-1 text-right text-xs">
-          <div class="flex justify-between items-center border-b border-slate-200/60 dark:border-slate-700 pb-1">
+        <div class="space-y-1.5 text-right text-xs">
+          <div class="flex justify-between items-center border-b border-slate-200/60 dark:border-slate-700 pb-1.5">
             <span class="text-slate-500">عنوان الدفع (IPA):</span>
-            <span class="font-bold text-slate-900 dark:text-white select-all">bw.balckwhite@instapay</span>
+            <span class="font-bold text-slate-900 dark:text-white select-all font-mono">bw.balckwhite@instapay</span>
           </div>
           <div class="flex justify-between items-center pt-1">
-            <span class="text-slate-500">رقم الهاتف:</span>
-            <span class="font-bold text-slate-900 dark:text-white select-all">01111197146</span>
+            <span class="text-slate-500">رقم المحفظة / الهاتف:</span>
+            <span class="font-bold text-slate-900 dark:text-white select-all font-mono">01111197146</span>
           </div>
         </div>
       </div>
 
       <div class="space-y-2">
-        <a href="https://ipn.eg/S/bw.balckwhite/instapay/76KcLD" target="_blank" class="w-full block bg-pink-600 text-white font-bold py-2.5 rounded-xl hover:bg-pink-700 transition text-xs shadow-md">
-          فتح تطبيق InstaPay للتحويل المباشر ⚡
+        <a href="https://ipn.eg/S/bw.balckwhite/instapay/76KcLD" target="_blank" class="w-full flex items-center justify-center gap-2 bg-purple-600 text-white font-bold py-2.5 rounded-xl hover:bg-purple-700 transition text-xs shadow-md">
+          <i data-lucide="smartphone" class="w-4 h-4"></i> فتح تطبيق InstaPay
         </a>
-        <a href="https://wa.me/201111197146?text=مرحباً، قمت بالتحويل لتجديد اشتراك لوحة التحكم العقارية عبر InstaPay" target="_blank" class="w-full block bg-emerald-600 text-white font-bold py-2.5 rounded-xl hover:bg-emerald-700 transition text-xs shadow-md">
-          إرسال إشعار التحويل عبر واتساب 💬
+        <a href="https://wa.me/201111197146?text=مرحباً، قمت بتحويل مبلغ لتجديد اشتراكي في منصة لوسيديا." target="_blank" class="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold py-2.5 rounded-xl hover:bg-emerald-700 transition text-xs shadow-md">
+          <i data-lucide="message-circle" class="w-4 h-4"></i> إرسال تأكيد عبر واتساب
         </a>
-        <button onclick="closeInstapayModal()" class="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-2 rounded-xl hover:bg-slate-200 transition text-xs">
-          إغلاق
+        <button onclick="closeInstapayModal()" class="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-2.5 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition text-xs mt-1">
+          إغلاق النافذة
         </button>
       </div>
     </div>
@@ -640,5 +737,35 @@
 
   <script src="config.js"></script>
   <script src="admin.js"></script>
+  
+  <!-- تفعيل أيقونات Lucide فور تحميل الصفحة -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      lucide.createIcons();
+      // تحديث السنة في الفوتر إذا كان موجوداً
+      const yearSpan = document.getElementById('current-year');
+      if(yearSpan) {
+        yearSpan.textContent = new Date().getFullYear();
+      }
+    });
+
+    // دالة مساعدة لفتح وإغلاق القائمة الجانبية في الموبايل
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      
+      if (sidebar.classList.contains('-right-full')) {
+        // فتح
+        sidebar.classList.remove('-right-full');
+        sidebar.classList.add('right-0');
+        overlay.classList.remove('hidden');
+      } else {
+        // إغلاق
+        sidebar.classList.add('-right-full');
+        sidebar.classList.remove('right-0');
+        overlay.classList.add('hidden');
+      }
+    }
+  </script>
 </body>
 </html>
