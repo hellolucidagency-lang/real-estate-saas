@@ -1,305 +1,214 @@
-/**
- * ==========================================================
- *  المنطق الرئيسي — لا حاجة لتعديل هذا الملف عادةً
- *  كل الإعدادات موجودة في config.js
- * ==========================================================
- */
+// app.js - محرك عرض موقع العميل الديناميكي
+document.addEventListener('DOMContentLoaded', async () => {
+  const loadingScreen = document.getElementById('loading-screen');
+  const errorScreen = document.getElementById('error-screen');
+  const appContainer = document.getElementById('app');
 
-const { BASE_ID, TOKEN, TABLES, FIELDS } = AIRTABLE_CONFIG;
-const AIRTABLE_API = "https://api.airtable.com/v0";
+  // 1. تحديد هوية العميل (Slug)
+  const urlParams = new URLSearchParams(window.location.search);
+  const hostname = window.location.hostname;
+  
+  let clientSlug = urlParams.get('client') || (typeof CONFIG !== 'undefined' && CONFIG.CLIENT_SLUG);
 
-// عناصر الصفحة
-const els = {
-  loading: document.getElementById("loading-screen"),
-  error: document.getElementById("error-screen"),
-  errorMessage: document.getElementById("error-message"),
-  app: document.getElementById("app"),
-  clientLogo: document.getElementById("client-logo"),
-  clientName: document.getElementById("client-name"),
-  heroClientName: document.getElementById("hero-client-name"),
-  footerClientName: document.getElementById("footer-client-name"),
-  headerWhatsapp: document.getElementById("header-whatsapp"),
-  floatingWhatsapp: document.getElementById("floating-whatsapp"),
-  propertiesGrid: document.getElementById("properties-grid"),
-  propertiesCount: document.getElementById("properties-count"),
-  emptyProperties: document.getElementById("empty-properties"),
-  cardTemplate: document.getElementById("property-card-template"),
-};
-
-init();
-
-async function init() {
-  try {
-    // 1) قراءة اسم العميل من الرابط، مثال: ?client=ahmed-estate
-    const params = new URLSearchParams(window.location.search);
-    const clientSlug = params.get("client");
-
-    if (!clientSlug) {
-      showError("الرابط غير مكتمل. الرجاء إضافة ?client=اسم-الشركة إلى الرابط.");
-      return;
+  // إذا كان العميل يفتح من دومين فرعي مثل: ahmed-estate.hellolucidagency.workers.dev
+  if (!clientSlug && hostname.includes('.')) {
+    const parts = hostname.split('.');
+    if (parts.length > 2 && parts[0] !== 'real-estate-saas' && parts[0] !== 'www') {
+      clientSlug = parts[0];
     }
-
-    // 2) جلب بيانات العميل من جدول Clients
-    const client = await fetchClient(clientSlug);
-    if (!client) {
-      showError(`لا يوجد حساب باسم "${clientSlug}".`);
-      return;
-    }
-
-    // 3) تطبيق هوية العميل (الألوان، اللوجو، الفافيكون، Open Graph)
-    applyClientBranding(client);
-
-    // 4) جلب العقارات الخاصة بهذا العميل فقط
-    const properties = await fetchProperties(clientSlug);
-
-    // 5) عرضها في الصفحة
-    renderProperties(properties);
-
-    els.loading.style.opacity = "0";
-    setTimeout(() => els.loading.classList.add("hidden"), 400);
-    els.app.classList.remove("hidden");
-  } catch (err) {
-    console.error(err);
-    showError("حدث خطأ أثناء تحميل البيانات. الرجاء المحاولة لاحقاً.");
-  }
-}
-
-/* ==========================================================
- *  Airtable Requests
- * ========================================================== */
-
-async function fetchClient(slug) {
-  const formula = encodeURIComponent(`{${FIELDS.CLIENT_SLUG}} = "${slug}"`);
-  const url = `${AIRTABLE_API}/${BASE_ID}/${encodeURIComponent(TABLES.CLIENTS)}?filterByFormula=${formula}&maxRecords=1`;
-
-  const res = await airtableFetch(url);
-  const record = res.records?.[0];
-  return record ? record.fields : null;
-}
-
-async function fetchProperties(slug) {
-  // ملاحظة: حقل "Client_Slug (from Clients)" هو حقل Lookup، وقيمته تُرجع
-  // دائماً كمصفوفة حتى لو كانت تحتوي على قيمة واحدة فقط. لذلك لا يمكن مقارنته
-  // مباشرة بـ "=" كما لو كان نصاً عادياً — نستخدم ARRAYJOIN لتحويله إلى نص
-  // أولاً قبل المقارنة. لو غيّرت هذا الحقل ليصبح حقل نص عادي مستقبلاً،
-  // بدّل السطر التالي إلى: `{${FIELDS.PROPERTY_CLIENT_SLUG}} = "${slug}"`
-  const formula = encodeURIComponent(
-    `ARRAYJOIN({${FIELDS.PROPERTY_CLIENT_SLUG}}) = "${slug}"`
-  );
-  let url = `${AIRTABLE_API}/${BASE_ID}/${encodeURIComponent(TABLES.PROPERTIES)}?filterByFormula=${formula}`;
-
-  // Airtable يرجع 100 سجل كحد أقصى في كل طلب، هذا الجزء يجلب كل الصفحات تلقائياً
-  let allRecords = [];
-  let offset = null;
-
-  do {
-    const pageUrl = offset ? `${url}&offset=${offset}` : url;
-    const res = await airtableFetch(pageUrl);
-    allRecords = allRecords.concat(res.records || []);
-    offset = res.offset;
-  } while (offset);
-
-  return allRecords.map((r) => r.fields);
-}
-
-async function airtableFetch(url) {
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${TOKEN}` },
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Airtable request failed (${res.status}): ${body}`);
   }
 
-  return res.json();
-}
+  // افتراضي في حالة التجربة المحلية
+  if (!clientSlug) clientSlug = 'ahmed-estate';
 
-/* ==========================================================
- *  تطبيق هوية العميل على الصفحة
- * ========================================================== */
+  const baseId = (typeof AIRTABLE_CONFIG !== 'undefined' && AIRTABLE_CONFIG.BASE_ID) || (typeof CONFIG !== 'undefined' && CONFIG.AIRTABLE_BASE_ID);
+  const token = (typeof AIRTABLE_CONFIG !== 'undefined' && AIRTABLE_CONFIG.TOKEN);
+  const clientsTable = encodeURIComponent((typeof AIRTABLE_CONFIG !== 'undefined' && AIRTABLE_CONFIG.TABLES?.CLIENTS) || 'Clients');
+  const propsTable = encodeURIComponent((typeof AIRTABLE_CONFIG !== 'undefined' && AIRTABLE_CONFIG.TABLES?.PROPERTIES) || 'الوحدات العقارية');
 
-function applyClientBranding(client) {
-  const name = client[FIELDS.COMPANY_NAME] || "منصة العقارات";
-  const color = client[FIELDS.THEME_COLOR] || "#16302B";
-  const logo = client[FIELDS.LOGO_URL];
-  const favicon = client[FIELDS.FAVICON_URL];
-  const shareImage = client[FIELDS.SHARE_IMAGE_URL];
-  const whatsapp = client[FIELDS.WHATSAPP];
-
-  // اللون الأساسي (CSS Variable)
-  document.documentElement.style.setProperty("--theme-color", color);
-
-  // اسم الشركة في كل الأماكن
-  document.title = name;
-  els.clientName.textContent = name;
-  els.heroClientName.textContent = name;
-  els.footerClientName.textContent = name;
-
-  // اللوجو
-  if (logo) {
-    els.clientLogo.src = logo;
-    els.clientLogo.classList.remove("hidden");
-  }
-
-  // الفافيكون
-  if (favicon) {
-    document.getElementById("favicon").href = favicon;
-  }
-
-  // Open Graph / meta tags
-  document.getElementById("meta-description").content = `تصفح عقارات ${name}`;
-  document.getElementById("og-title").content = name;
-  document.getElementById("og-description").content = `تصفح عقارات ${name}`;
-  if (shareImage) {
-    document.getElementById("og-image").content = shareImage;
-  }
-
-  // روابط واتساب (الهيدر + الزر العائم)
-  if (whatsapp) {
-    const link = buildWhatsappLink(whatsapp, `مرحباً، أرغب بالاستفسار عن عقاراتكم لدى ${name}`);
-    els.headerWhatsapp.href = link;
-    els.floatingWhatsapp.href = link;
-    els.floatingWhatsapp.classList.remove("hidden");
-    els.floatingWhatsapp.classList.add("flex");
-  } else {
-    els.headerWhatsapp.classList.add("hidden");
-  }
-}
-
-function buildWhatsappLink(number, message) {
-  const cleanNumber = String(number).replace(/[^0-9]/g, "");
-  return `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
-}
-
-/* ==========================================================
- *  عرض العقارات
- * ========================================================== */
-
-function renderProperties(properties) {
-  els.propertiesCount.textContent =
-    properties.length > 0
-      ? `${properties.length} عقار متاح حالياً`
-      : "لا توجد عقارات متاحة حالياً";
-
-  if (properties.length === 0) {
-    els.emptyProperties.classList.remove("hidden");
+  if (!baseId || !token) {
+    showError('يرجى التأكد من إعدادات الاتصال في config.js');
     return;
   }
 
-  const fragment = document.createDocumentFragment();
-  properties.forEach((property) => {
-    fragment.appendChild(buildPropertyCard(property));
-  });
-  els.propertiesGrid.appendChild(fragment);
-}
+  try {
+    // 2. جلب بيانات العميل من جدول Clients
+    const clientRes = await fetch(`https://api.airtable.com/v0/${baseId}/${clientsTable}?filterByFormula={Client_Slug}='${clientSlug}'`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const clientData = await clientRes.json();
 
-function buildPropertyCard(property) {
-  const node = els.cardTemplate.content.cloneNode(true);
-
-  const title = property[FIELDS.PROPERTY_TITLE] || "عقار بدون عنوان";
-  const location = property[FIELDS.PROPERTY_LOCATION] || "";
-  const price = property[FIELDS.PROPERTY_PRICE];
-  const bedrooms = property[FIELDS.PROPERTY_BEDROOMS];
-  const bathrooms = property[FIELDS.PROPERTY_BATHROOMS];
-  const area = property[FIELDS.PROPERTY_AREA];
-  const offerType = property[FIELDS.PROPERTY_OFFER_TYPE] || "";
-  const description = property[FIELDS.PROPERTY_DESCRIPTION] || "";
-  const status = property[FIELDS.PROPERTY_STATUS] || "";
-  const imagesRaw = property[FIELDS.PROPERTY_IMAGES] || "";
-
-  // تحويل النص المفصول بفاصلة إلى مصفوفة روابط صور نظيفة
-  const images = imagesRaw
-    .split(",")
-    .map((url) => url.trim())
-    .filter(Boolean);
-
-  // الصور (Scroll أفقي بسيط)
-  const scrollContainer = node.querySelector(".image-scroll");
-  const dotsContainer = node.querySelector(".dots");
-  const finalImages = images.length > 0 ? images : ["https://placehold.co/600x400?text=No+Image"];
-
-  finalImages.forEach((src, i) => {
-    const slide = document.createElement("div");
-    slide.className = "w-full h-56 flex-shrink-0";
-    slide.innerHTML = `<img src="${src}" loading="lazy" class="w-full h-full object-cover" alt="${title}" />`;
-    scrollContainer.appendChild(slide);
-
-    if (finalImages.length > 1) {
-      const dot = document.createElement("span");
-      dot.className = "w-1.5 h-1.5 rounded-full bg-white/70";
-      dot.dataset.index = i;
-      dotsContainer.appendChild(dot);
+    if (!clientData.records || clientData.records.length === 0) {
+      showError('لم يتم العثور على هذا المكتب العقاري.');
+      return;
     }
-  });
 
-  // ربط النقاط بموضع التمرير (اختياري لكن يعطي لمسة أنيقة)
-  if (finalImages.length > 1) {
-    scrollContainer.addEventListener("scroll", () => {
-      const index = Math.round(scrollContainer.scrollLeft / scrollContainer.clientWidth);
-      [...dotsContainer.children].forEach((dot, i) => {
-        dot.classList.toggle("bg-white", i === index);
-        dot.classList.toggle("bg-white/70", i !== index);
+    const client = clientData.records[0].fields;
+    renderClientBranding(client);
+
+    // 3. جلب عقارات العميل فقط من جدول الوحدات العقارية
+    const propsRes = await fetch(`https://api.airtable.com/v0/${baseId}/${propsTable}?filterByFormula={Status}='متاح'`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const propsData = await propsRes.json();
+    
+    // فلترة العقارات الخاصة بهذا العميل
+    const clientProps = (propsData.records || []).filter(r => {
+      const c = r.fields['Client_Slug (from Clients)'];
+      if (Array.isArray(c)) return c.includes(clientSlug);
+      return c === clientSlug || !c; // لو عقار تجريبي
+    });
+
+    renderProperties(clientProps, client);
+
+    // إظهار الموقع وإخفاء شاشة التحميل
+    loadingScreen.style.opacity = '0';
+    setTimeout(() => {
+      loadingScreen.style.display = 'none';
+      appContainer.classList.remove('hidden');
+    }, 400);
+
+  } catch (err) {
+    showError('حدث خطأ أثناء تحميل بيانات الموقع.');
+  }
+
+  function showError(msg) {
+    loadingScreen.style.display = 'none';
+    errorScreen.classList.remove('hidden');
+    document.getElementById('error-message').innerText = msg;
+  }
+
+  // تطبيق الهوية والألوان وروابط التواصل
+  function renderClientBranding(client) {
+    const brandName = client.Company_Name || client.Client_Slug;
+    const brandColor = client.Theme_Color || '#16302B';
+    const whatsappNumber = client.Whatsapp || '201111197146';
+
+    document.documentElement.style.setProperty('--theme-color', brandColor);
+    document.title = `${brandName} | العقارات والوحدات المتاحة`;
+
+    document.getElementById('client-name').innerText = brandName;
+    document.getElementById('hero-client-name').innerText = brandName;
+    document.getElementById('footer-client-name').innerText = brandName;
+
+    // اللوجو
+    const logoEl = document.getElementById('client-logo');
+    const logoUrl = client.Logo_URL || (client.Logo && client.Logo[0]?.url);
+    if (logoUrl) {
+      logoEl.src = logoUrl;
+      logoEl.classList.remove('hidden');
+    }
+
+    // Favicon
+    if (client.Favicon_URL) {
+      const fav = document.getElementById('favicon');
+      if (fav) fav.href = client.Favicon_URL;
+    }
+
+    // روابط الواتساب العامة
+    const waLink = `https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('مرحباً، أود الاستفسار عن العقارات المتاحة لديكم')}`;
+    const headWa = document.getElementById('header-whatsapp');
+    const floatWa = document.getElementById('floating-whatsapp');
+    
+    if (headWa) headWa.href = waLink;
+    if (floatWa) {
+      floatWa.href = waLink;
+      floatWa.classList.remove('hidden');
+      floatWa.classList.add('flex');
+    }
+
+    // تفعيل Meta Pixel إذا وجد
+    if (client.Meta_Pixel_ID) {
+      injectMetaPixel(client.Meta_Pixel_ID);
+    }
+  }
+
+  // عرض بطاقات العقارات
+  function renderProperties(properties, client) {
+    const grid = document.getElementById('properties-grid');
+    const countEl = document.getElementById('properties-count');
+    const emptyEl = document.getElementById('empty-properties');
+    const template = document.getElementById('property-card-template');
+
+    countEl.innerText = `يوجد لدينا حالياً ${properties.length} عقار متاح`;
+
+    if (properties.length === 0) {
+      emptyEl.classList.remove('hidden');
+      return;
+    }
+
+    grid.innerHTML = '';
+    const whatsappNumber = client.Whatsapp || '201111197146';
+
+    properties.forEach(item => {
+      const f = item.fields;
+      const clone = template.content.cloneNode(true);
+
+      // استخراج الصور (من Cloudinary أولاً أو Attachments)
+      let images = [];
+      if (f.Cloudinary_Images) {
+        images = f.Cloudinary_Images.split(',').map(s => s.trim());
+      } else if (f.Attachments && Array.isArray(f.Attachments)) {
+        images = f.Attachments.map(a => a.url);
+      }
+
+      if (images.length === 0) {
+        images = ['https://via.placeholder.com/600x400?text=No+Image'];
+      }
+
+      // سلايدر الصور والـ Dots
+      const scrollBox = clone.querySelector('.image-scroll');
+      const dotsBox = clone.querySelector('.dots');
+      
+      images.forEach((imgUrl, idx) => {
+        const imgDiv = document.createElement('div');
+        imgDiv.className = 'w-full h-full shrink-0';
+        imgDiv.innerHTML = `<img src="${imgUrl}" class="w-full h-full object-cover" loading="lazy" />`;
+        scrollBox.appendChild(imgDiv);
+
+        if (images.length > 1) {
+          const dot = document.createElement('span');
+          dot.className = `w-2 h-2 rounded-full ${idx === 0 ? 'bg-white' : 'bg-white/50'}`;
+          dotsBox.appendChild(dot);
+        }
       });
+
+      // تفاصيل العقار
+      const title = f.Property_Title || f.Description || 'عقار مميز';
+      clone.querySelector('.title').innerText = title;
+      clone.querySelector('.price-badge').innerText = `${Number(f.Price || 0).toLocaleString()} ج.م`;
+      clone.querySelector('.location').innerText = f.Description ? `📍 ${f.Description}` : '';
+      clone.querySelector('.status-badge').innerText = f.Status || 'متاح';
+      clone.querySelector('.offer-type').innerText = `${f.Property_Type || 'شقة'} · ${f.Offer_Type || 'للبيع'}`;
+
+      // المساحة والغرف والحمامات
+      const meta = clone.querySelector('.meta');
+      meta.innerHTML = `
+        ${f.Area ? `<span>📐 ${f.Area} م²</span>` : ''}
+        ${f.Bedrooms ? `<span>🛏️ ${f.Bedrooms} غرف</span>` : ''}
+        ${f.Bathrooms ? `<span>🚿 ${f.Bathrooms} حمام</span>` : ''}
+      `;
+
+      // زر الاستفسار عبر واتساب لكل عقار مخصص
+      const propWaMsg = `مرحباً، أود الاستفسار عن عقار: ${title} - السعر: ${Number(f.Price || 0).toLocaleString()} ج.م`;
+      const propWaLink = `https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(propWaMsg)}`;
+      const cardWa = clone.querySelector('.card-whatsapp');
+      cardWa.href = propWaLink;
+
+      grid.appendChild(clone);
     });
   }
 
-  // شارة السعر
-  const priceBadge = node.querySelector(".price-badge");
-  if (price) {
-    priceBadge.textContent = formatPrice(price);
-  } else {
-    priceBadge.remove();
+  function injectMetaPixel(pixelId) {
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', pixelId);
+    fbq('track', 'PageView');
   }
-
-  // العنوان والموقع ونوع العرض
-  node.querySelector(".title").textContent = title;
-
-  const locationEl = node.querySelector(".location");
-  if (location) locationEl.textContent = location; else locationEl.remove();
-
-  const offerTypeEl = node.querySelector(".offer-type");
-  if (offerType) offerTypeEl.textContent = offerType; else offerTypeEl.remove();
-
-  // حالة الوحدة (متاح / محجوز / مباع...) كشارة صغيرة بجانب العنوان
-  const statusEl = node.querySelector(".status-badge");
-  if (status) statusEl.textContent = status; else statusEl.remove();
-
-  // الوصف
-  const descriptionEl = node.querySelector(".description");
-  if (description) descriptionEl.textContent = description; else descriptionEl.remove();
-
-  // التفاصيل (غرف / حمامات / مساحة)
-  const meta = node.querySelector(".meta");
-  const metaItems = [];
-  if (bedrooms) metaItems.push(`${bedrooms} غرف`);
-  if (bathrooms) metaItems.push(`${bathrooms} حمام`);
-  if (area) metaItems.push(`${area} م²`);
-  meta.textContent = metaItems.join(" · ");
-
-  // زر واتساب داخل الكرت
-  const cardWhatsapp = node.querySelector(".card-whatsapp");
-  const clientWhatsapp = document.getElementById("header-whatsapp").href;
-  if (clientWhatsapp && clientWhatsapp !== "#" && !clientWhatsapp.endsWith("#")) {
-    const message = `مرحباً، أرغب بالاستفسار عن هذا العقار: ${title}`;
-    // نعيد استخدام نفس رقم واتساب الخاص بالعميل مع رسالة مخصصة لهذا العقار
-    const number = new URL(clientWhatsapp).pathname.split("/").pop();
-    cardWhatsapp.href = `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
-  } else {
-    cardWhatsapp.remove();
-  }
-
-  return node;
-}
-
-function formatPrice(price) {
-  const number = Number(price);
-  if (Number.isNaN(number)) return price;
-  return `${number.toLocaleString("en-US")} جنيه`;
-}
-
-function showError(message) {
-  els.errorMessage.textContent = message;
-  els.loading.classList.add("hidden");
-  els.error.classList.remove("hidden");
-}
+});
