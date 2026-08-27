@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>إنشاء موقعك العقاري | انضم لمنصة لوسيد لإدارة العقارات</title>
+  <title>إنشاء موقعك | انضم لمنصة لوسيديا</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <style>
@@ -22,13 +22,15 @@
   <!-- الهيدر -->
   <header class="relative z-10 max-w-5xl mx-auto w-full px-6 py-6 flex items-center justify-between">
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 bg-teal-600 rounded-xl flex items-center justify-center text-xl font-black shadow-lg shadow-teal-600/30">🏢</div>
+      <div class="w-10 h-10 bg-teal-600 rounded-xl flex items-center justify-center text-xl font-black shadow-lg shadow-teal-600/30">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      </div>
       <div>
-        <h1 class="text-base font-black text-white">منصة العقارات الذكية</h1>
-        <p class="text-[11px] text-teal-400 font-bold">بواسطة وكالة لوسيد</p>
+        <h1 class="text-base font-black text-white">منظومة لوسيديا الذكية</h1>
+        <p class="text-[11px] text-teal-400 font-bold">لإدارة الأعمال المتكاملة</p>
       </div>
     </div>
-    <a href="https://wa.me/201111197146?text=مرحباً، لدي استفسار بخصوص الاشتراك في منصة إدارة العقارات" target="_blank" class="text-xs font-bold text-slate-300 hover:text-white bg-slate-800/80 border border-slate-700 px-4 py-2 rounded-xl transition">
+    <a href="https://wa.me/201111197146?text=مرحباً، لدي استفسار بخصوص الاشتراك في منصة لوسيديا" target="_blank" class="text-xs font-bold text-slate-300 hover:text-white bg-slate-800/80 border border-slate-700 px-4 py-2 rounded-xl transition">
       💬 تواصل مع المبيعات
     </a>
   </header>
@@ -38,16 +40,28 @@
     <div class="text-center mb-8">
       <span class="text-xs font-bold bg-teal-950 text-teal-400 border border-teal-800/60 px-3 py-1 rounded-full">🚀 عرض الإطلاق الخاص</span>
       <h2 class="text-2xl md:text-4xl font-black text-white mt-3">امتلك موقعك ولوحة تحكمك في دقائق</h2>
-      <p class="text-xs md:text-sm text-slate-400 mt-2">نظام متكامل لعرض الوحدات، تتبع الزوار والإعلانات، وربط الواتساب والدومين المخصص</p>
+      <p class="text-xs md:text-sm text-slate-400 mt-2">نظام متكامل لإدارة أعمالك، تتبع الزوار والإعلانات، وربط الواتساب والدومين المخصص</p>
     </div>
 
     <div class="bg-slate-800/80 backdrop-blur-xl border border-slate-700/80 rounded-3xl p-6 md:p-8 shadow-2xl">
       <form id="register-form" onsubmit="handleRegister(event)" class="space-y-4">
         
+        <!-- قطاع العمل -->
+        <div>
+          <label class="block text-xs font-bold mb-1.5 text-slate-200">مجال عملك (القطاع) *</label>
+          <select id="reg-sector" required class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-teal-500 outline-none text-white transition appearance-none cursor-pointer">
+            <option value="" disabled selected>اختر مجال عملك...</option>
+            <option value="عقارات">لوسيديا عقارات (Real Estate)</option>
+            <option value="محاماة">لوسيديا برو للمحامين (Legal)</option>
+            <option value="عيادات">لوسيديا للعيادات (Clinics)</option>
+            <option value="سيارات">لوسيديا أوتو (Cars)</option>
+          </select>
+        </div>
+        
         <!-- اسم المكتب -->
         <div>
-          <label class="block text-xs font-bold mb-1.5 text-slate-200">اسم المكتب أو الشركة العقارية *</label>
-          <input type="text" id="reg-company" required placeholder="مثال: شركة الصفوة للتسويق العقاري" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-teal-500 outline-none text-white transition" />
+          <label class="block text-xs font-bold mb-1.5 text-slate-200">اسم المكتب أو الشركة *</label>
+          <input type="text" id="reg-company" required placeholder="مثال: شركة الصفوة" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-teal-500 outline-none text-white transition" />
         </div>
 
         <!-- رابط الموقع المطلوب (Slug) -->
@@ -55,7 +69,7 @@
           <label class="block text-xs font-bold mb-1.5 text-slate-200">الرابط المطلوب لموقعك (Slug بالإنجليزي) *</label>
           <div class="flex items-center bg-slate-900/90 border border-slate-700 rounded-xl px-3 focus-within:ring-2 focus-within:ring-teal-500 transition">
             <span class="text-xs text-slate-500 select-none font-mono">.hellolucidagency.workers.dev</span>
-            <input type="text" id="reg-slug" required dir="ltr" placeholder="alsafwa-estate" class="w-full bg-transparent py-3 px-2 text-xs outline-none text-teal-400 font-mono font-bold" />
+            <input type="text" id="reg-slug" required dir="ltr" placeholder="alsafwa" class="w-full bg-transparent py-3 px-2 text-xs outline-none text-teal-400 font-mono font-bold" />
           </div>
           <p class="text-[11px] text-slate-500 mt-1">يمكنك لاحقاً ربط دومينك الخاص (مثل alsafwa.com) مجاناً.</p>
         </div>
@@ -87,7 +101,7 @@
               </div>
               <div class="mt-3">
                 <div class="text-lg font-black text-teal-400">7,999 ج.م <span class="text-[11px] text-slate-400 font-normal">/ سنوياً</span></div>
-                <div class="text-[10px] text-slate-400 mt-1">200 عقار + ربط دومين مخصص + بيكسل إعلاني</div>
+                <div class="text-[10px] text-slate-400 mt-1">200 منتج/خدمة + ربط دومين مخصص + بيكسل إعلاني</div>
               </div>
             </label>
 
@@ -100,7 +114,7 @@
               </div>
               <div class="mt-3">
                 <div class="text-lg font-black text-white">1,499 ج.م <span class="text-[11px] text-slate-400 font-normal">/ 3 أشهر</span></div>
-                <div class="text-[10px] text-slate-400 mt-1">50 عقاراً + لوحة تحكم وواتساب مخصص</div>
+                <div class="text-[10px] text-slate-400 mt-1">50 منتج/خدمة + لوحة تحكم وواتساب مخصص</div>
               </div>
             </label>
 
@@ -160,6 +174,7 @@
       btn.disabled = true;
       btn.innerText = 'جاري إنشاء حسابك...';
 
+      const sector = document.getElementById('reg-sector').value;
       const company = document.getElementById('reg-company').value.trim();
       let slug = document.getElementById('reg-slug').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
       const whatsapp = document.getElementById('reg-whatsapp').value.trim();
@@ -168,6 +183,7 @@
 
       const payload = {
         type: 'new_client_registration',
+        Sector: sector,
         companyName: company,
         clientSlug: slug,
         whatsapp: whatsapp,
@@ -186,7 +202,7 @@
           });
         }
 
-        const waMsg = `مرحباً أستاذة ليلى، قمت بالتسجيل في المنصة العقارية لمكتب: (${company}) - الرابط: (${slug}) - الخطة: (${plan}). وقمت بالتحويل عبر InstaPay، يرجى تفعيل الحساب.`;
+        const waMsg = `مرحباً أستاذة ليلى، اشتركت في لوسيديا (قطاع: ${sector}) لشركة: (${company}) - الرابط: (${slug}) - الخطة: (${plan}). وحولت عبر InstaPay، يرجى التفعيل.`;
         document.getElementById('wa-notify-btn').href = `https://wa.me/201111197146?text=${encodeURIComponent(waMsg)}`;
 
         const modal = document.getElementById('payment-modal');
