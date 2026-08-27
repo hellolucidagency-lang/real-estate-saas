@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>إنشاء موقعك العقاري | انضم لمنصة لوسيد لإدارة العقارات</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Cairo', sans-serif; }
+    .plan-card:hover { border-color: #0d9488; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-teal-500 selection:text-white">
+
+  <!-- خلفية جمالية -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+    <div class="absolute -top-40 -right-40 w-96 h-96 bg-teal-600/20 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl"></div>
+  </div>
+
+  <!-- الهيدر -->
+  <header class="relative z-10 max-w-5xl mx-auto w-full px-6 py-6 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-teal-600 rounded-xl flex items-center justify-center text-xl font-black shadow-lg shadow-teal-600/30">🏢</div>
+      <div>
+        <h1 class="text-base font-black text-white">منصة العقارات الذكية</h1>
+        <p class="text-[11px] text-teal-400 font-bold">بواسطة وكالة لوسيد</p>
+      </div>
+    </div>
+    <a href="https://wa.me/201111197146?text=مرحباً، لدي استفسار بخصوص الاشتراك في منصة إدارة العقارات" target="_blank" class="text-xs font-bold text-slate-300 hover:text-white bg-slate-800/80 border border-slate-700 px-4 py-2 rounded-xl transition">
+      💬 تواصل مع المبيعات
+    </a>
+  </header>
+
+  <!-- محتوى التسجيل -->
+  <main class="relative z-10 max-w-2xl mx-auto w-full px-6 py-8">
+    <div class="text-center mb-8">
+      <span class="text-xs font-bold bg-teal-950 text-teal-400 border border-teal-800/60 px-3 py-1 rounded-full">🚀 عرض الإطلاق الخاص</span>
+      <h2 class="text-2xl md:text-4xl font-black text-white mt-3">امتلك موقعك ولوحة تحكمك في دقائق</h2>
+      <p class="text-xs md:text-sm text-slate-400 mt-2">نظام متكامل لعرض الوحدات، تتبع الزوار والإعلانات، وربط الواتساب والدومين المخصص</p>
+    </div>
+
+    <div class="bg-slate-800/80 backdrop-blur-xl border border-slate-700/80 rounded-3xl p-6 md:p-8 shadow-2xl">
+      <form id="register-form" onsubmit="handleRegister(event)" class="space-y-4">
+        
+        <!-- اسم المكتب -->
+        <div>
+          <label class="block text-xs font-bold mb-1.5 text-slate-200">اسم المكتب أو الشركة العقارية *</label>
+          <input type="text" id="reg-company" required placeholder="مثال: شركة الصفوة للتسويق العقاري" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-teal-500 outline-none text-white transition" />
+        </div>
+
+        <!-- رابط الموقع المطلوب (Slug) -->
+        <div>
+          <label class="block text-xs font-bold mb-1.5 text-slate-200">الرابط المطلوب لموقعك (Slug بالإنجليزي) *</label>
+          <div class="flex items-center bg-slate-900/90 border border-slate-700 rounded-xl px-3 focus-within:ring-2 focus-within:ring-teal-500 transition">
+            <span class="text-xs text-slate-500 select-none font-mono">.hellolucidagency.workers.dev</span>
+            <input type="text" id="reg-slug" required dir="ltr" placeholder="alsafwa-estate" class="w-full bg-transparent py-3 px-2 text-xs outline-none text-teal-400 font-mono font-bold" />
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1">يمكنك لاحقاً ربط دومينك الخاص (مثل alsafwa.com) مجاناً.</p>
+        </div>
+
+        <!-- أرقام الاتصال -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold mb-1.5 text-slate-200">رقم الواتساب (لاستقبال العملاء) *</label>
+            <input type="tel" id="reg-whatsapp" required placeholder="مثال: 01012345678" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-teal-500 outline-none text-white transition" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold mb-1.5 text-slate-200">كلمة مرور لوحة التحكم *</label>
+            <input type="password" id="reg-password" required placeholder="اختر كلمة مرور للدخول" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-teal-500 outline-none text-white transition" />
+          </div>
+        </div>
+
+        <!-- اختيار الباقة -->
+        <div class="pt-2">
+          <label class="block text-xs font-bold mb-2 text-slate-200">اختر خطة الاشتراك المناسبة:</label>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            
+            <label class="plan-card relative flex flex-col justify-between p-4 bg-slate-900/90 border-2 border-teal-500 rounded-2xl cursor-pointer transition">
+              <div class="flex items-start justify-between">
+                <div class="flex items-center gap-2">
+                  <input type="radio" name="plan" value="الباقة السنوية Pro" checked class="text-teal-600 focus:ring-0" />
+                  <span class="text-xs font-black text-white">السنوية (Pro) ⭐</span>
+                </div>
+                <span class="text-[10px] bg-teal-500 text-slate-950 font-black px-2 py-0.5 rounded-full">وفر 25%</span>
+              </div>
+              <div class="mt-3">
+                <div class="text-lg font-black text-teal-400">7,999 ج.م <span class="text-[11px] text-slate-400 font-normal">/ سنوياً</span></div>
+                <div class="text-[10px] text-slate-400 mt-1">200 عقار + ربط دومين مخصص + بيكسل إعلاني</div>
+              </div>
+            </label>
+
+            <label class="plan-card relative flex flex-col justify-between p-4 bg-slate-900/60 border border-slate-700 rounded-2xl cursor-pointer transition">
+              <div class="flex items-start justify-between">
+                <div class="flex items-center gap-2">
+                  <input type="radio" name="plan" value="الباقة الربع سنوية Starter" class="text-teal-600 focus:ring-0" />
+                  <span class="text-xs font-bold text-white">باقة 3 أشهر (Starter)</span>
+                </div>
+              </div>
+              <div class="mt-3">
+                <div class="text-lg font-black text-white">1,499 ج.م <span class="text-[11px] text-slate-400 font-normal">/ 3 أشهر</span></div>
+                <div class="text-[10px] text-slate-400 mt-1">50 عقاراً + لوحة تحكم وواتساب مخصص</div>
+              </div>
+            </label>
+
+          </div>
+        </div>
+
+        <!-- زر الاشتراك -->
+        <button type="submit" id="submit-btn" class="w-full bg-teal-600 text-white font-black py-4 rounded-2xl hover:bg-teal-500 transition shadow-lg shadow-teal-600/30 text-sm mt-4">
+          تأكيد الاشتراك والانتقال للدفع ⚡
+        </button>
+      </form>
+    </div>
+  </main>
+
+  <!-- نافذة الدفع InstaPay بعد التسجيل -->
+  <div id="payment-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl max-w-sm w-full p-6 text-center">
+      <div class="w-12 h-12 bg-pink-950 text-pink-500 border border-pink-800 rounded-2xl flex items-center justify-center mx-auto mb-3 text-xl font-black">⚡</div>
+      <h3 class="text-lg font-black text-white mb-1">تم تسجيل حسابك بنجاح!</h3>
+      <p class="text-xs text-slate-400 mb-4">أكمل الدفع عبر InstaPay وسيتم تفعيل موقعك ولوحة تحكمك فوراً</p>
+      
+      <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 mb-4">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=Https://ipn.eg/S/bw.balckwhite/instapay/76KcLD" alt="InstaPay QR" class="w-32 h-32 mx-auto rounded-xl border border-slate-700 mb-3" />
+        
+        <div class="space-y-1 text-right text-xs">
+          <div class="flex justify-between items-center border-b border-slate-800 pb-1">
+            <span class="text-slate-400">عنوان الدفع (IPA):</span>
+            <span class="font-bold text-teal-400 select-all font-mono">bw.balckwhite@instapay</span>
+          </div>
+          <div class="flex justify-between items-center pt-1">
+            <span class="text-slate-400">رقم الهاتف:</span>
+            <span class="font-bold text-teal-400 select-all font-mono">01111197146</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        <a href="https://ipn.eg/S/bw.balckwhite/instapay/76KcLD" target="_blank" class="w-full block bg-pink-600 text-white font-bold py-3 rounded-xl hover:bg-pink-500 transition text-xs shadow-md">
+          فتح تطبيق InstaPay للتحويل المباشر ⚡
+        </a>
+        <a id="wa-notify-btn" href="#" target="_blank" class="w-full block bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-500 transition text-xs shadow-md">
+          إرسال إشعار التحويل عبر واتساب 💬
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <footer class="relative z-10 max-w-5xl mx-auto w-full px-6 py-4 text-center text-xs text-slate-500">
+    جميع الحقوق محفوظة © وكالة لوسيد (Hello Lucid Agency)
+  </footer>
+
+  <script src="config.js"></script>
+  <script>
+    async function handleRegister(e) {
+      e.preventDefault();
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+      btn.innerText = 'جاري إنشاء حسابك...';
+
+      const company = document.getElementById('reg-company').value.trim();
+      let slug = document.getElementById('reg-slug').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+      const whatsapp = document.getElementById('reg-whatsapp').value.trim();
+      const password = document.getElementById('reg-password').value.trim();
+      const plan = document.querySelector('input[name="plan"]:checked').value;
+
+      const payload = {
+        type: 'new_client_registration',
+        companyName: company,
+        clientSlug: slug,
+        whatsapp: whatsapp,
+        password: password,
+        plan: plan,
+        status: 'Pending'
+      };
+
+      try {
+        const webhookUrl = (typeof CONFIG !== 'undefined' && CONFIG.N8N_WEBHOOK_URL) ? CONFIG.N8N_WEBHOOK_URL : '';
+        if (webhookUrl) {
+          await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
+
+        const waMsg = `مرحباً أستاذة ليلى، قمت بالتسجيل في المنصة العقارية لمكتب: (${company}) - الرابط: (${slug}) - الخطة: (${plan}). وقمت بالتحويل عبر InstaPay، يرجى تفعيل الحساب.`;
+        document.getElementById('wa-notify-btn').href = `https://wa.me/201111197146?text=${encodeURIComponent(waMsg)}`;
+
+        const modal = document.getElementById('payment-modal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      } catch (err) {
+        alert('حدث خطأ أثناء التسجيل، يرجى المحاولة ثانية.');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'تأكيد الاشتراك والانتقال للدفع ⚡';
+      }
+    }
+  </script>
+</body>
+</html>
