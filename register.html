@@ -12,16 +12,6 @@
   <style>
     body { font-family: 'Tajawal', sans-serif; background-color: #f8fafc; }
     .glass-card { background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(10px); }
-    .custom-select {
-      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-      background-position: left 0.75rem center;
-      background-repeat: no-repeat;
-      background-size: 1.25em 1.25em;
-      padding-left: 2.5rem;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      appearance: none;
-    }
   </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4 bg-slate-50">
@@ -29,7 +19,6 @@
   <div class="glass-card w-full max-w-md rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
     <!-- Header -->
     <div class="bg-blue-600 p-6 text-center flex flex-col items-center justify-center">
-      <!-- Lucid Logo -->
       <img src="https://res.cloudinary.com/fig3bixy/image/upload/v1787504073/LUCID_svbv9m.jpg" alt="Lucid Agency" class="h-12 w-auto object-contain rounded-xl shadow-sm mb-3 bg-white p-1">
       <h1 class="text-2xl font-black text-white tracking-wide">لوسيديا</h1>
       <p class="text-blue-100 text-xs mt-1">أطلق منصتك الاحترافية في 3 دقائق</p>
@@ -43,35 +32,50 @@
 
       <form id="register-form" class="space-y-4">
         
-        <!-- Sector Selection -->
-        <div>
+        <!-- Custom Sector Dropdown -->
+        <div class="relative">
           <label class="block text-xs font-bold text-slate-700 mb-1">مجال عملك *</label>
-          <select id="sector" required class="custom-select w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-slate-700 bg-white text-sm font-medium">
-            <option value="Lucidia Estate">🏢 تسويق عقاري</option>
-            <option value="Lucidia Clinics">🩺 عيادات ورعاية صحية</option>
-            <option value="Lucidia Pro">⚖️ استشارات قانونية ومحاماة</option>
-          </select>
+          <input type="hidden" id="sector" name="sector" value="Lucidia Estate">
+          
+          <button type="button" id="custom-select-btn" class="w-full flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+            <span id="selected-option-text">🏢 تسويق عقاري</span>
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </button>
+
+          <div id="custom-select-menu" class="hidden absolute z-30 w-full mt-1 bg-white border border-slate-100 rounded-xl shadow-lg overflow-hidden">
+            <div class="option-item px-4 py-3 hover:bg-blue-50 text-sm cursor-pointer transition-colors border-b border-slate-50 flex items-center gap-2" data-value="Lucidia Estate" data-label="🏢 تسويق عقاري">
+              <span>🏢</span> <span>تسويق عقاري</span>
+            </div>
+            <div class="option-item px-4 py-3 hover:bg-blue-50 text-sm cursor-pointer transition-colors border-b border-slate-50 flex items-center gap-2" data-value="Lucidia Clinics" data-label="🩺 عيادات ورعاية صحية">
+              <span>🩺</span> <span>عيادات ورعاية صحية</span>
+            </div>
+            <div class="option-item px-4 py-3 hover:bg-blue-50 text-sm cursor-pointer transition-colors flex items-center gap-2" data-value="Lucidia Pro" data-label="⚖️ استشارات قانونية ومحاماة">
+              <span>⚖️</span> <span>استشارات قانونية ومحاماة</span>
+            </div>
+          </div>
         </div>
 
         <!-- Business Name -->
         <div>
           <label class="block text-xs font-bold text-slate-700 mb-1">اسم الشركة أو العيادة *</label>
           <input type="text" id="company_name" placeholder="مثال: النور للعقارات / عيادات د. أحمد" required
-            class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-slate-700 text-sm">
+            class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-slate-700 text-sm bg-white">
         </div>
 
         <!-- WhatsApp -->
         <div>
           <label class="block text-xs font-bold text-slate-700 mb-1">رقم الواتساب (لاستقبال الحجوزات) *</label>
-          <input type="tel" id="whatsapp" placeholder="01111197146" required
-            class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-slate-700 dir-ltr text-right text-sm">
+          <input type="tel" id="whatsapp" placeholder="010XXXXXXXX" required
+            class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-slate-700 dir-ltr text-right text-sm bg-white">
         </div>
 
         <!-- Password -->
         <div>
           <label class="block text-xs font-bold text-slate-700 mb-1">كلمة المرور للوحة التحكم *</label>
           <input type="password" id="password" placeholder="••••••••" required
-            class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-slate-700 text-sm">
+            class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-slate-700 text-sm bg-white">
         </div>
 
         <button type="submit" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition-all shadow-md shadow-blue-200 hover:shadow-lg mt-2 text-sm">
@@ -97,6 +101,34 @@
   </div>
 
   <script>
+    // التحكم في القائمة المنسدلة المخصصة
+    const selectBtn = document.getElementById('custom-select-btn');
+    const selectMenu = document.getElementById('custom-select-menu');
+    const sectorInput = document.getElementById('sector');
+    const selectedText = document.getElementById('selected-option-text');
+
+    selectBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectMenu.classList.toggle('hidden');
+    });
+
+    document.querySelectorAll('.option-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const val = item.getAttribute('data-value');
+        const label = item.getAttribute('data-label');
+        sectorInput.value = val;
+        selectedText.innerText = label;
+        selectMenu.classList.add('hidden');
+      });
+    });
+
+    document.addEventListener('click', () => {
+      if (!selectMenu.classList.contains('hidden')) {
+        selectMenu.classList.add('hidden');
+      }
+    });
+
+    // معالجة نموذج التسجيل
     document.getElementById('register-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       
@@ -106,8 +138,8 @@
       const payload = {
         type: 'register_client',
         sector: document.getElementById('sector').value,
-        company_name: document.getElementById('company_name').value,
-        whatsapp: document.getElementById('whatsapp').value,
+        company_name: document.getElementById('company_name').value.trim(),
+        whatsapp: document.getElementById('whatsapp').value.trim(),
         password: document.getElementById('password').value
       };
 
@@ -124,13 +156,22 @@
         });
 
         if (res.ok) {
+          const resData = await res.json().catch(() => ({}));
+          
+          // حفظ بيانات الجلسة عشان لوحة التحكم تفتح بحساب العميل مباشرة
+          localStorage.setItem('lucidia_whatsapp', payload.whatsapp);
+          localStorage.setItem('lucidia_password', payload.password);
+          if (resData.client_slug) {
+            localStorage.setItem('lucidia_client_slug', resData.client_slug);
+          }
+
           msgBox.className = 'mt-4 text-center text-xs font-bold p-3 rounded-lg bg-green-50 text-green-700 border border-green-200';
           msgBox.innerText = '✅ تم إنشاء حسابك بنجاح! سيتم تحويلك للوحة التحكم...';
           msgBox.classList.remove('hidden');
           
           setTimeout(() => {
             window.location.href = 'admin.html';
-          }, 2000);
+          }, 1500);
         } else {
           throw new Error('حدث خطأ في الخادم');
         }
