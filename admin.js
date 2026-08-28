@@ -4,7 +4,7 @@
 
 const CONFIG = {
   // رابط الـ Webhook بتاع n8n
-  WEBHOOK_URL: 'https://n8n.hellolucidagency.com/webhook/lucidia-api',
+  WEBHOOK_URL: 'https://n8n.hellolucidagency.com/webhook/14cdad9c-e685-4a4b-aec9-76cd19544ee6',
 };
 
 // حالة التطبيق الداخلية
