@@ -250,10 +250,32 @@ function setupEventListeners() {
     loginBtn.addEventListener('click', window.checkPass);
   }
 }
+
+// ==========================================
+// دوال مساعدة لتحويل الصور
+// ==========================================
+function getBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
+}
+
+// دالة لمعاينة اسم الصورة المرفوعة
+function updateFileName(input, textId) {
+  const nameDisplay = document.getElementById(textId);
+  if (input.files && input.files.length > 0) {
+    nameDisplay.textContent = input.files[0].name;
+  } else {
+    nameDisplay.textContent = '';
+  }
+}
+
 // ==========================================
 // دوال حفظ الإعدادات (الهوية، السيو، السوشيال، الدومين، التسويق)
 // ==========================================
-
 async function sendDataToN8n(payload) {
   try {
     const res = await fetch(window.CONFIG.WEBHOOK_URL, {
@@ -273,13 +295,29 @@ async function sendDataToN8n(payload) {
 
 async function handleSettingsSubmit(e) {
   e.preventDefault();
+  
+  // قراءة صورة اللوجو
+  let logoBase64 = '';
+  const logoInput = document.getElementById('setting-logo');
+  if (logoInput && logoInput.files.length > 0) {
+    logoBase64 = await getBase64(logoInput.files[0]);
+  }
+
+  // قراءة الأيقونة (Favicon)
+  let faviconBase64 = '';
+  const faviconInput = document.getElementById('setting-favicon');
+  if (faviconInput && faviconInput.files.length > 0) {
+    faviconBase64 = await getBase64(faviconInput.files[0]);
+  }
+
   const payload = {
     action: 'update_settings',
     client_whatsapp: currentClient.whatsapp,
     company_name: document.getElementById('setting-agency-name')?.value,
     primary_color: document.getElementById('setting-color')?.value,
     accent_color: document.getElementById('setting-accent-color')?.value,
-    // لاحظي: اللوجو يحتاج مسار رفع في n8n إذا كان base64
+    logo_url: logoBase64,
+    favicon_url: faviconBase64
   };
   await sendDataToN8n(payload);
 }
@@ -343,14 +381,4 @@ async function handleContentSubmit(e) {
     about_satisfaction: document.getElementById('about-satisfaction')?.value,
   };
   await sendDataToN8n(payload);
-}
-
-// دالة لمعاينة اسم الصورة المرفوعة
-function updateFileName(input, textId) {
-  const nameDisplay = document.getElementById(textId);
-  if (input.files && input.files.length > 0) {
-    nameDisplay.textContent = input.files[0].name;
-  } else {
-    nameDisplay.textContent = '';
-  }
 }
