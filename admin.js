@@ -1,8 +1,7 @@
 // ==========================================
-// LUCIDIA SAAS - UNIFIED ADMIN DASHBOARD ENGINE (V3.1)
+// LUCIDIA SAAS - UNIFIED ADMIN DASHBOARD ENGINE (V3.2)
 // ==========================================
 
-// تجنب تكرار تعريف CONFIG إذا كان موجوداً في config.js
 window.CONFIG = window.CONFIG || {
   WEBHOOK_URL: 'https://n8n.hellolucidagency.com/webhook/14cdad9c-e685-4a4b-aec9-76cd19544ee6',
   BASE_URL: 'https://app.hellolucidagency.com'
@@ -19,13 +18,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function initDashboard() {
   console.log('🚀 Lucidia Dashboard Initialized...');
-  
   loadClientData();
   customizeSectorUI();
   setupImageUploader();
   setupEventListeners();
 
-  // إذا كان العميل مسجلاً حديثاً أو الجلسة مفتوحة، يتم فتح اللوحة مباشرة
   const savedPass = localStorage.getItem('lucidia_password');
   const passInput = document.getElementById('admin-pass-input') || document.querySelector('#login-modal input[type="password"]');
   
@@ -34,15 +31,11 @@ async function initDashboard() {
   }
 }
 
-// ==========================================
-// دالة تسجيل الدخول وفك قفل اللوحة
-// ==========================================
 window.checkPass = function() {
   const passInput = document.querySelector('#login-modal input[type="password"]') || document.getElementById('admin-pass-input');
   const inputVal = passInput ? passInput.value.trim() : '';
   const expectedPass = localStorage.getItem('lucidia_password');
 
-  // قبول الدخول إذا تطابقت كلمة المرور أو كلمة مرور الطوارئ/الافتراضية
   if (!expectedPass || inputVal === expectedPass || inputVal === '55555' || inputVal.length >= 4) {
     if (inputVal) localStorage.setItem('lucidia_password', inputVal);
     unlockDashboard();
@@ -61,9 +54,6 @@ function unlockDashboard() {
   fetchClientItems();
 }
 
-// ==========================================
-// تخصيص البيانات والقطاع
-// ==========================================
 function loadClientData() {
   const urlParams = new URLSearchParams(window.location.search);
   const clientWhatsapp = urlParams.get('client') || localStorage.getItem('lucidia_whatsapp') || '01111197146';
@@ -84,9 +74,6 @@ function customizeSectorUI() {
   
   const platform1Label = document.getElementById('label-platform-1');
   const platform2Label = document.getElementById('label-platform-2');
-  const platform1Input = document.getElementById('input-platform-1');
-  const platform2Input = document.getElementById('input-platform-2');
-
   const itemTitleLabel = document.getElementById('label-item-title');
   const itemPriceLabel = document.getElementById('label-item-price');
   const itemCategoryLabel = document.getElementById('label-item-category');
@@ -103,17 +90,11 @@ function customizeSectorUI() {
     if (itemTitleLabel) itemTitleLabel.innerText = 'عنوان العقار / الوحدة *';
     if (itemPriceLabel) itemPriceLabel.innerText = 'السعر الإجمالي (ج.م)';
     if (itemCategoryLabel) itemCategoryLabel.innerText = 'نوع العقار';
-  } else if (sector.includes('Pro') || sector.includes('محاماة')) {
-    if (platform1Label) platform1Label.innerText = '⚖️ حساب منصة قانوني';
-    if (platform2Label) platform2Label.innerText = '💼 صفحة LinkedIn الرسمية';
-    if (itemTitleLabel) itemTitleLabel.innerText = 'نوع الاستشارة / التخصص القضائي *';
-    if (itemPriceLabel) itemPriceLabel.innerText = 'قيمة الاستشارة (ج.م)';
-    if (itemCategoryLabel) itemCategoryLabel.innerText = 'الفرع القانوني';
   }
 }
 
 // ==========================================
-// رفع ومعاينة الصور والـ Hero
+// رفع ومعاينة الصور والـ Hero مع زر الحذف (X)
 // ==========================================
 function setupImageUploader() {
   const fileInput = document.getElementById('item-image-input');
@@ -121,14 +102,21 @@ function setupImageUploader() {
 
   fileInput.addEventListener('change', (e) => {
     const files = Array.from(e.target.files);
+    let loadedCount = 0;
+    
     files.forEach(file => {
       const reader = new FileReader();
       reader.onload = (event) => {
         uploadedImages.push({ file, url: event.target.result });
-        renderImagesPreview();
+        loadedCount++;
+        if (loadedCount === files.length) {
+          renderImagesPreview();
+        }
       };
       reader.readAsDataURL(file);
     });
+    // تفريغ الانبوت عشان لو اختار نفس الصورة تاني تشتغل
+    fileInput.value = '';
   });
 }
 
@@ -140,26 +128,54 @@ function renderImagesPreview() {
   uploadedImages.forEach((imgObj, index) => {
     const isHero = index === heroImageIndex;
     const div = document.createElement('div');
-    div.className = `relative rounded-xl overflow-hidden border-2 h-20 cursor-pointer ${isHero ? 'border-blue-600 ring-2 ring-blue-300' : 'border-slate-200'}`;
+    div.className = `relative rounded-xl overflow-hidden border-2 h-24 cursor-pointer ${isHero ? 'border-blue-600 ring-2 ring-blue-300' : 'border-slate-200'} group`;
+    
     div.innerHTML = `
       <img src="${imgObj.url}" class="w-full h-full object-cover">
-      ${isHero ? '<span class="absolute top-1 right-1 bg-blue-600 text-white text-[9px] px-1 rounded">الغلاف ⭐</span>' : ''}
+      ${isHero ? '<span class="absolute bottom-1 right-1 bg-blue-600 text-white text-[9px] px-1 rounded">الغلاف ⭐</span>' : ''}
+      <button class="absolute top-1 left-1 bg-red-500/80 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition" onclick="removeImage(${index}, event)">
+        <i data-lucide="x" class="w-3 h-3"></i>
+      </button>
     `;
+    
+    // النقر على الصورة يخليها الغلاف
     div.addEventListener('click', () => {
       heroImageIndex = index;
       renderImagesPreview();
     });
+    
     previewContainer.appendChild(div);
   });
+  
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// دالة مسح الصورة
+window.removeImage = function(index, event) {
+  event.stopPropagation(); // عشان النقر ما يخليهاش غلاف
+  uploadedImages.splice(index, 1);
+  // إعادة ضبط الغلاف لو مسحنا الغلاف الحالي
+  if (heroImageIndex >= uploadedImages.length) {
+    heroImageIndex = 0;
+  }
+  renderImagesPreview();
+};
+
 // ==========================================
-// حفظ العناصر وجلب البيانات
+// حفظ العناصر وإرسال مصفوفة الصور لـ n8n
 // ==========================================
 async function handleAddItem(e) {
   if (e) e.preventDefault();
   const title = document.getElementById('item-title')?.value.trim();
   if (!title) return alert('يرجى كتابة الاسم/العنوان');
+
+  // تجهيز مصفوفة الصور زي ما n8n عايزها
+  const imagesArray = uploadedImages.map(img => {
+    return {
+      name: img.file.name,
+      data: img.url
+    };
+  });
 
   const payload = {
     action: 'add_item',
@@ -169,6 +185,7 @@ async function handleAddItem(e) {
     price: document.getElementById('item-price')?.value || 0,
     category: document.getElementById('item-category')?.value || 'عام',
     description: document.getElementById('item-desc')?.value || '',
+    images: imagesArray,
     hero_image_url: uploadedImages[heroImageIndex]?.url || ''
   };
 
@@ -182,6 +199,7 @@ async function handleAddItem(e) {
       alert('✅ تم الحفظ بنجاح');
       document.getElementById('form-add-item')?.reset();
       uploadedImages = [];
+      heroImageIndex = 0;
       renderImagesPreview();
       fetchClientItems();
     }
@@ -244,7 +262,6 @@ function setupEventListeners() {
   const btnExport = document.getElementById('btn-export-csv');
   if (btnExport) btnExport.addEventListener('click', exportToCSV);
 
-  // ربط زر تسجيل الدخول يدوياً في حال لم يكن مرتبطاً بـ onclick
   const loginBtn = document.querySelector('#login-modal button');
   if (loginBtn && !loginBtn.getAttribute('onclick')) {
     loginBtn.addEventListener('click', window.checkPass);
@@ -252,7 +269,7 @@ function setupEventListeners() {
 }
 
 // ==========================================
-// دوال مساعدة لتحويل الصور
+// دوال حفظ الإعدادات (الهوية والسيو وغيرها)
 // ==========================================
 function getBase64(file) {
   return new Promise((resolve, reject) => {
@@ -263,7 +280,6 @@ function getBase64(file) {
   });
 }
 
-// دالة لمعاينة اسم الصورة المرفوعة
 function updateFileName(input, textId) {
   const nameDisplay = document.getElementById(textId);
   if (input.files && input.files.length > 0) {
@@ -273,9 +289,6 @@ function updateFileName(input, textId) {
   }
 }
 
-// ==========================================
-// دوال حفظ الإعدادات (الهوية، السيو، السوشيال، الدومين، التسويق)
-// ==========================================
 async function sendDataToN8n(payload) {
   try {
     const res = await fetch(window.CONFIG.WEBHOOK_URL, {
@@ -295,15 +308,12 @@ async function sendDataToN8n(payload) {
 
 async function handleSettingsSubmit(e) {
   e.preventDefault();
-  
-  // قراءة صورة اللوجو
   let logoBase64 = '';
   const logoInput = document.getElementById('setting-logo');
   if (logoInput && logoInput.files.length > 0) {
     logoBase64 = await getBase64(logoInput.files[0]);
   }
 
-  // قراءة الأيقونة (Favicon)
   let faviconBase64 = '';
   const faviconInput = document.getElementById('setting-favicon');
   if (faviconInput && faviconInput.files.length > 0) {
