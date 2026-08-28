@@ -7,7 +7,6 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <!-- إضافة مكتبة Lucide للأيقونات الاحترافية -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     tailwind.config = {
@@ -28,8 +27,6 @@
     .dropzone-box:hover { border-color: #3b82f6; background-color: #eff6ff; }
     .dark .dropzone-box { border-color: #334155; }
     .dark .dropzone-box:hover { border-color: #3b82f6; background-color: #0f172a; }
-    
-    /* تنسيق خاص لأيقونات Lucide */
     .lucide { width: 18px; height: 18px; stroke-width: 2; }
   </style>
 </head>
@@ -84,7 +81,7 @@
             <i data-lucide="globe"></i> رابط الموقع والدومين
           </button>
           <button onclick="switchTab('settings-content')" id="nav-settings-content" class="nav-btn">
-            <i data-lucide="file-text"></i> نصوص الواجهة ومن نحن
+            <i data-lucide="file-text"></i> محتوى الصفحة الرئيسية والنبذة
           </button>
           <button onclick="switchTab('settings-seo')" id="nav-settings-seo" class="nav-btn">
             <i data-lucide="search"></i> تحسين محركات البحث (SEO)
@@ -173,12 +170,18 @@
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
             <div>
               <h2 id="list-title" class="text-xl font-bold text-slate-900 dark:text-white">إدارة المنتجات / الخدمات</h2>
-              <p class="text-xs text-slate-500 dark:text-slate-400">إدارة العناصر المنشورة والتعديل عليها أو تنزيل نسخة إكسيل</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400">إدارة العناصر المنشورة والتعديل عليها أو استيراد وتصدير إكسيل</p>
             </div>
-            <div class="flex flex-wrap items-center gap-3">
-              <button onclick="exportToExcel()" class="flex items-center gap-2 bg-emerald-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-emerald-700 transition shadow-sm">
-                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> تصدير إكسيل
+            <div class="flex flex-wrap items-center gap-2">
+              <label for="input-import-csv" class="flex items-center gap-2 bg-amber-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-amber-700 transition shadow-sm cursor-pointer">
+                <i data-lucide="download" class="w-4 h-4"></i> استيراد
+              </label>
+              <input type="file" id="input-import-csv" accept=".csv" class="hidden" />
+
+              <button onclick="exportToCSV()" id="btn-export-csv" class="flex items-center gap-2 bg-emerald-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-emerald-700 transition shadow-sm">
+                <i data-lucide="upload" class="w-4 h-4"></i> تصدير
               </button>
+
               <button onclick="switchTab('properties-add')" class="flex items-center gap-2 bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-blue-700 transition shadow-sm">
                 <i data-lucide="plus" class="w-4 h-4"></i> <span id="btn-add-label">إضافة جديد</span>
               </button>
@@ -190,19 +193,16 @@
               <table class="w-full text-right text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">
                 <thead class="bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold border-b border-slate-200 dark:border-slate-700">
                   <tr>
-                    <th class="p-4">الصورة</th>
                     <th class="p-4">العنوان</th>
-                    <th class="p-4">القسم</th>
-                    <th class="p-4" id="th-location">الموقع/التفاصيل</th>
                     <th class="p-4">السعر</th>
-                    <th class="p-4" id="th-area">المساحة</th>
-                    <th class="p-4">الحالة</th>
+                    <th class="p-4">القسم</th>
+                    <th class="p-4">التفاصيل/الوصف</th>
                     <th class="p-4 text-center">إجراءات</th>
                   </tr>
                 </thead>
-                <tbody id="properties-table-body" class="divide-y divide-slate-100 dark:divide-slate-800">
+                <tbody id="items-table-body" class="divide-y divide-slate-100 dark:divide-slate-800">
                   <tr>
-                    <td colspan="8" class="p-8 text-center text-slate-400">
+                    <td colspan="5" class="p-8 text-center text-slate-400">
                       <div class="flex flex-col items-center gap-2">
                         <i data-lucide="loader-2" class="w-6 h-6 animate-spin"></i>
                         <span>جاري تحميل البيانات من السحابة...</span>
@@ -222,92 +222,44 @@
               <h2 id="prop-form-title" class="text-xl font-bold text-slate-900 dark:text-white">إضافة عنصر جديد</h2>
               <p class="text-xs text-slate-500 dark:text-slate-400">املأ البيانات المطلوبة لنشرها على موقعك</p>
             </div>
-            <button id="cancel-edit-btn" onclick="cancelEditMode()" class="hidden text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold px-3 py-1.5 rounded-lg hover:bg-slate-200 transition flex items-center gap-1">
-              <i data-lucide="x" class="w-3 h-3"></i> إلغاء التعديل
-            </button>
           </div>
 
-          <form id="property-form" onsubmit="handlePropertySubmit(event)" class="space-y-4">
-            <input type="hidden" id="edit-record-id" value="" />
-            <!-- حقل مخفي لتخزين القطاع (سيتم تعبئته بواسطة JS) -->
-            <input type="hidden" id="item-sector" value="" />
-
+          <form id="form-add-item" class="space-y-4">
             <div>
-              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300" id="lbl-title">العنوان *</label>
-              <input type="text" id="prop-title" required placeholder="مثال: استشارة قانونية / شقة للبيع / كشف أسنان" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
+              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300" id="label-item-title">العنوان *</label>
+              <input type="text" id="item-title" required placeholder="مثال: استشارة قانونية / شقة للبيع / كشف أسنان" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300" id="lbl-category">القسم (Category) *</label>
-                <!-- سيتم تعبئة الخيارات بناءً على القطاع بواسطة JS -->
-                <select id="prop-type" required class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs">
-                  <option value="" disabled selected>اختر القسم...</option>
-                </select>
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300" id="label-item-category">القسم (Category) *</label>
+                <input type="text" id="item-category" required placeholder="مثال: عام, تجاري, طب أطفال" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
               </div>
               <div>
-                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300" id="lbl-type">نوع الخدمة/العرض *</label>
-                <select id="prop-offer-type" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs">
-                   <!-- سيتم تعبئته ديناميكياً -->
-                </select>
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300" id="label-item-price">السعر (ج.م) *</label>
+                <input type="number" id="item-price" required placeholder="0" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
               </div>
-              <div>
-                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300" id="lbl-location">الموقع / التفاصيل *</label>
-                <input type="text" id="prop-location" required placeholder="معلومة إضافية عن الموقع أو الخدمة" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">السعر (ج.م) *</label>
-                <input type="number" id="prop-price" required placeholder="0" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
-              </div>
-              
-              <!-- هذه الحقول ستظهر للعقارات فقط -->
-              <div class="real-estate-field">
-                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">المساحة (م²)</label>
-                <input type="number" id="prop-area" placeholder="مثال: 180" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
-              </div>
-              <div class="real-estate-field">
-                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">عدد الغرف</label>
-                <input type="number" id="prop-rooms" placeholder="مثال: 3" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
-              </div>
-              <div class="real-estate-field">
-                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">عدد الحمامات</label>
-                <input type="number" id="prop-baths" placeholder="مثال: 2" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
-              </div>
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">الحالة *</label>
-              <select id="prop-status" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs">
-                <option value="متاح">متاح / نشط</option>
-                <option value="غير متاح">غير متاح / مكتمل</option>
-                <option value="قريباً">قريباً</option>
-              </select>
-            </div>
-
-            <!-- إضافة حقل الوصف الذي كان مفقوداً في HTML ولكنه موجود في Airtable -->
-            <div>
-              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">الوصف (Description)</label>
-              <textarea id="prop-description" rows="3" placeholder="اكتب تفاصيل إضافية هنا..." class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs"></textarea>
             </div>
 
             <div>
-              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">الصور (اختياري)</label>
-              <label for="prop-images" class="dropzone-box bg-slate-50 dark:bg-slate-800/50">
+              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">الوصف (Description)</label>
+              <textarea id="item-desc" rows="3" placeholder="اكتب تفاصيل إضافية هنا..." class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs"></textarea>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300" id="label-item-images">الصور ومعاينة الغلاف (Hero Image)</label>
+              <label for="item-image-input" class="dropzone-box bg-slate-50 dark:bg-slate-800/50">
                 <i data-lucide="image-plus" class="w-8 h-8 text-slate-400 mb-2"></i>
                 <span class="text-xs font-bold text-slate-700 dark:text-slate-300">اضغط لاختيار الصور</span>
-                <span class="text-[11px] text-slate-500 mt-1">يمكنك تحديد عدة صور في وقت واحد</span>
-                <span id="prop-images-name" class="text-xs font-bold text-blue-600 mt-2 block w-full text-center truncate px-4"></span>
+                <span class="text-[11px] text-slate-500 mt-1">يمكنك تحديد عدة صور، واضغط على أي صورة لتعيينها كغلاف</span>
               </label>
-              <input type="file" id="prop-images" multiple accept="image/*" class="hidden" onchange="updateFileName(this, 'prop-images-name')" />
+              <input type="file" id="item-image-input" multiple accept="image/*" class="hidden" />
+              <div id="images-preview-container" class="mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3"></div>
             </div>
 
-            <button type="submit" id="prop-submit-btn" class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition text-xs shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2">
+            <button type="submit" id="prop-submit-btn" class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition text-xs shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 mt-4">
               <i data-lucide="save" class="w-4 h-4"></i> حفظ ونشر
             </button>
-            <p id="prop-msg" class="text-center text-xs font-bold mt-2 hidden"></p>
           </form>
         </section>
 
@@ -445,7 +397,7 @@
         <!-- 5. قسم نصوص الواجهة ومن نحن -->
         <section id="sec-settings-content" class="hidden max-w-3xl bg-white dark:bg-slate-900 p-6 md:p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
           <div>
-            <h2 class="text-xl font-bold text-slate-900 dark:text-white">نصوص الواجهة ومن نحن</h2>
+            <h2 class="text-xl font-bold text-slate-900 dark:text-white">محتوى الصفحة الرئيسية والنبذة</h2>
             <p class="text-xs text-slate-500 dark:text-slate-400">تخصيص الكلمة الافتتاحية والنبذة التعريفية لعملائك</p>
           </div>
 
@@ -738,7 +690,7 @@
   <script src="config.js"></script>
   <script src="admin.js"></script>
   
-  <!-- تفعيل أيقونات Lucide فور تحميل الصفحة -->
+  <!-- تفعيل أيقونات Lucide فور تحميل الصفحة وتفعيل دالة التبويبات -->
   <script>
     document.addEventListener("DOMContentLoaded", function() {
       lucide.createIcons();
@@ -764,6 +716,27 @@
         sidebar.classList.add('-right-full');
         sidebar.classList.remove('right-0');
         overlay.classList.add('hidden');
+      }
+    }
+
+    // دالة التنقل بين التبويبات (Tabs Switcher)
+    function switchTab(tabName) {
+      // إخفاء كل الأقسام
+      document.querySelectorAll('main section').forEach(sec => sec.classList.add('hidden'));
+      // إزالة تفعيل كل الأزرار
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+
+      // إظهار القسم المطلوب
+      const targetSec = document.getElementById('sec-' + tabName);
+      if (targetSec) targetSec.classList.remove('hidden');
+
+      // تفعيل الزر المطلوب في القائمة الجانبية
+      const targetBtn = document.getElementById('nav-' + tabName);
+      if (targetBtn) targetBtn.classList.add('active');
+
+      // إغلاق القائمة الجانبية في الموبايل بعد اختيار قسم
+      if (window.innerWidth < 768) {
+        toggleSidebar();
       }
     }
   </script>
