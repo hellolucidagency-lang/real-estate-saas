@@ -250,3 +250,107 @@ function setupEventListeners() {
     loginBtn.addEventListener('click', window.checkPass);
   }
 }
+// ==========================================
+// دوال حفظ الإعدادات (الهوية، السيو، السوشيال، الدومين، التسويق)
+// ==========================================
+
+async function sendDataToN8n(payload) {
+  try {
+    const res = await fetch(window.CONFIG.WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      alert('✅ تم الحفظ بنجاح!');
+    } else {
+      alert('❌ حدث خطأ أثناء الحفظ في السيرفر.');
+    }
+  } catch (err) {
+    alert('❌ تعذر الاتصال بالسيرفر.');
+  }
+}
+
+async function handleSettingsSubmit(e) {
+  e.preventDefault();
+  const payload = {
+    action: 'update_settings',
+    client_whatsapp: currentClient.whatsapp,
+    company_name: document.getElementById('setting-agency-name')?.value,
+    primary_color: document.getElementById('setting-color')?.value,
+    accent_color: document.getElementById('setting-accent-color')?.value,
+    // لاحظي: اللوجو يحتاج مسار رفع في n8n إذا كان base64
+  };
+  await sendDataToN8n(payload);
+}
+
+async function handleSocialSubmit(e) {
+  e.preventDefault();
+  const payload = {
+    action: 'update_social',
+    client_whatsapp: currentClient.whatsapp,
+    whatsapp: document.getElementById('social-whatsapp')?.value,
+    phone: document.getElementById('social-phone')?.value,
+    maps: document.getElementById('social-maps')?.value,
+    facebook: document.getElementById('social-facebook')?.value,
+    instagram: document.getElementById('social-instagram')?.value,
+  };
+  await sendDataToN8n(payload);
+}
+
+async function handleSeoSubmit(e) {
+  e.preventDefault();
+  const payload = {
+    action: 'update_seo',
+    client_whatsapp: currentClient.whatsapp,
+    seo_title: document.getElementById('seo-title')?.value,
+    seo_desc: document.getElementById('seo-desc')?.value,
+  };
+  await sendDataToN8n(payload);
+}
+
+async function handleMarketingSubmit(e) {
+  e.preventDefault();
+  const payload = {
+    action: 'update_marketing',
+    client_whatsapp: currentClient.whatsapp,
+    meta_pixel: document.getElementById('mkt-meta')?.value,
+    tiktok_pixel: document.getElementById('mkt-tiktok')?.value,
+    snapchat_pixel: document.getElementById('mkt-snapchat')?.value,
+    ga4_id: document.getElementById('mkt-ga4')?.value,
+  };
+  await sendDataToN8n(payload);
+}
+
+async function handleDomainSubmit(e) {
+  e.preventDefault();
+  const payload = {
+    action: 'update_domain',
+    client_whatsapp: currentClient.whatsapp,
+    custom_domain: document.getElementById('custom-domain-input')?.value,
+  };
+  await sendDataToN8n(payload);
+}
+
+async function handleContentSubmit(e) {
+  e.preventDefault();
+  const payload = {
+    action: 'update_content',
+    client_whatsapp: currentClient.whatsapp,
+    hero_title: document.getElementById('hero-title')?.value,
+    hero_subtitle: document.getElementById('hero-subtitle')?.value,
+    about_exp: document.getElementById('about-exp')?.value,
+    about_satisfaction: document.getElementById('about-satisfaction')?.value,
+  };
+  await sendDataToN8n(payload);
+}
+
+// دالة لمعاينة اسم الصورة المرفوعة
+function updateFileName(input, textId) {
+  const nameDisplay = document.getElementById(textId);
+  if (input.files && input.files.length > 0) {
+    nameDisplay.textContent = input.files[0].name;
+  } else {
+    nameDisplay.textContent = '';
+  }
+}
