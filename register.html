@@ -135,8 +135,9 @@
       const btn = document.getElementById('submit-btn');
       const msgBox = document.getElementById('status-msg');
       
+      // التعديل السحري هنا: تم تغيير type إلى action لتتطابق مع n8n
       const payload = {
-        type: 'register_client',
+        action: 'register_client',
         sector: document.getElementById('sector').value,
         company_name: document.getElementById('company_name').value.trim(),
         whatsapp: document.getElementById('whatsapp').value.trim(),
@@ -158,9 +159,11 @@
         if (res.ok) {
           const resData = await res.json().catch(() => ({}));
           
-          // حفظ بيانات الجلسة عشان لوحة التحكم تفتح بحساب العميل مباشرة
+          // حفظ بيانات الجلسة 
           localStorage.setItem('lucidia_whatsapp', payload.whatsapp);
           localStorage.setItem('lucidia_password', payload.password);
+          localStorage.setItem('lucidia_sector', payload.sector);
+          
           if (resData.client_slug) {
             localStorage.setItem('lucidia_client_slug', resData.client_slug);
           }
@@ -169,15 +172,16 @@
           msgBox.innerText = '✅ تم إنشاء حسابك بنجاح! سيتم تحويلك للوحة التحكم...';
           msgBox.classList.remove('hidden');
           
+          // التعديل التاني: توجيه العميل ببياناته الدقيقة للوحة
           setTimeout(() => {
-            window.location.href = 'admin.html';
+            window.location.href = `admin.html?client=${payload.whatsapp}&sector=${encodeURIComponent(payload.sector)}`;
           }, 1500);
         } else {
           throw new Error('حدث خطأ في الخادم');
         }
       } catch (err) {
         msgBox.className = 'mt-4 text-center text-xs font-bold p-3 rounded-lg bg-red-50 text-red-700 border border-red-200';
-        msgBox.innerText = '❌ حدث خطأ، يرجى المحاولة مرة أخرى.';
+        msgBox.innerText = '❌ حدث خطأ، تأكد من اتصالك بالإنترنت ورابط السيرفر.';
         msgBox.classList.remove('hidden');
         btn.innerText = 'إنشاء حسابي مجاناً 🚀';
         btn.disabled = false;
