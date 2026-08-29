@@ -1,5 +1,5 @@
 // ==========================================
-// LUCIDIA SAAS - UNIFIED ADMIN DASHBOARD ENGINE (V4.0 - FULL SECTORS & DATA SYNC)
+// LUCIDIA SAAS - UNIFIED ADMIN DASHBOARD ENGINE (V4.5 - BULLETPROOF & AUTO-SECTOR)
 // ==========================================
 
 window.CONFIG = window.CONFIG || {
@@ -72,7 +72,7 @@ function loadClientData() {
 }
 
 // ==========================================
-// تخصيص واجهة المستخدم بدقة لجميع القطاعات الثلاثة
+// تخصيص واجهة المستخدم وأزرار الفلترة ديناميكياً
 // ==========================================
 function customizeSectorUI() {
   const sector = (currentClient?.sector || '').toLowerCase();
@@ -82,37 +82,58 @@ function customizeSectorUI() {
   const itemTitleLabel = document.getElementById('label-item-title');
   const itemPriceLabel = document.getElementById('label-item-price');
   const itemCategoryLabel = document.getElementById('label-item-category');
-  const tabsSubtitle = document.querySelector('.section-header-subtitle') || document.getElementById('section-subtitle');
+
+  // البحث عن أزرار الفلترة في الواجهة لتغيير مسمياتها
+  const filterButtons = document.querySelectorAll('.bg-blue-500, .bg-blue-600, .border-slate-200, button');
+  let filterContainer = null;
+  filterButtons.forEach(btn => {
+    if (btn.innerText.includes('العقارات') || btn.innerText.includes('التشطيبات') || btn.innerText.includes('الكل')) {
+      filterContainer = btn.parentElement;
+    }
+  });
 
   if (sector.includes('clinic') || sector.includes('عياد')) {
-    // 🩺 قطاع العيادات والرعاية الصحية
+    // 🩺 عيادات
     if (platform1Label) platform1Label.innerText = '🩺 حساب فيزيتا (Vezeeta)';
-    if (platform2Label) platform2Label.innerText = '🏥 حساب كلينيدو / سينا (CliniDo/Sena)';
-    if (itemTitleLabel) itemTitleLabel.innerText = 'اسم الخدمة الطبية / الحالة *';
+    if (platform2Label) platform2Label.innerText = '🏥 حساب كلينيدو / سينا';
+    if (itemTitleLabel) itemTitleLabel.innerText = 'اسم الخدمة الطبية / الكشف *';
     if (itemPriceLabel) itemPriceLabel.innerText = 'سعر الكشف / الإجراء (ج.م)';
-    if (itemCategoryLabel) itemCategoryLabel.innerText = 'القسم الطبي (أسنان، باطنة، جلدية...)';
-    if (tabsSubtitle) tabsSubtitle.innerText = 'إدارة الخدمات الطبية والعيادة';
+    if (itemCategoryLabel) itemCategoryLabel.innerText = 'القسم الطبي';
+    
+    if (filterContainer) {
+      filterContainer.innerHTML = `
+        <button type="button" class="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold shadow-sm">الكل</button>
+        <button type="button" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50">خدمات طبية</button>
+        <button type="button" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50">كشوفات وعمليات</button>
+      `;
+    }
   } else if (sector.includes('pro') || sector.includes('قانون') || sector.includes('محام')) {
-    // ⚖️ قطاع المحاماة والاستشارات القانونية
-    if (platform1Label) platform1Label.innerText = '⚖️ رقم القيد بنقابة المحامين / الدليل المهني';
-    if (platform2Label) platform2Label.innerText = '💼 حساب لينكد إن المهني (LinkedIn)';
-    if (itemTitleLabel) itemTitleLabel.innerText = 'اسم الخدمة القانونية / الاستشارة *';
+    // ⚖️ محاماة
+    if (platform1Label) platform1Label.innerText = '⚖️ رقم القيد بنقابة المحامين';
+    if (platform2Label) platform2Label.innerText = '💼 حساب لينكد إن (LinkedIn)';
+    if (itemTitleLabel) itemTitleLabel.innerText = 'اسم الاستشارة / الخدمة القانونية *';
     if (itemPriceLabel) itemPriceLabel.innerText = 'أتعاب الاستشارة / التوكيل (ج.م)';
-    if (itemCategoryLabel) itemCategoryLabel.innerText = 'التخصص القانوني (شركات، عقود، جنائي، مدني)';
-    if (tabsSubtitle) tabsSubtitle.innerText = 'إدارة الخدمات والاستشارات القانونية للمكتب';
+    if (itemCategoryLabel) itemCategoryLabel.innerText = 'التخصص القانوني';
+    
+    if (filterContainer) {
+      filterContainer.innerHTML = `
+        <button type="button" class="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold shadow-sm">الكل</button>
+        <button type="button" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50">استشارات قانونية</button>
+        <button type="button" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50">قضايا وتوكيلات</button>
+      `;
+    }
   } else {
-    // 🏢 قطاع العقارات والتسويق العقاري (الافتراضي)
+    // 🏢 عقارات
     if (platform1Label) platform1Label.innerText = '🏢 معرض عقارماب (Aqarmap)';
-    if (platform2Label) platform2Label.innerText = '🏠 حساب بروبرتي فايندر (Property Finder)';
+    if (platform2Label) platform2Label.innerText = '🏠 حساب بروبرتي فايندر';
     if (itemTitleLabel) itemTitleLabel.innerText = 'عنوان العقار / المشروع *';
     if (itemPriceLabel) itemPriceLabel.innerText = 'السعر الإجمالي (ج.م)';
     if (itemCategoryLabel) itemCategoryLabel.innerText = 'نوع العقار / تشطيبات';
-    if (tabsSubtitle) tabsSubtitle.innerText = 'إدارة الوحدات والعقارات المعروضة';
   }
 }
 
 // ==========================================
-// جلب وعرض البيانات من Airtable عبر n8n
+// جلب وعرض البيانات من Airtable
 // ==========================================
 async function fetchAllClientData() {
   try {
@@ -137,7 +158,6 @@ async function fetchAllClientData() {
         client = { ...client, ...client.fields };
       }
 
-      // تحديث القطاع لو راجع من قاعدة البيانات
       if (client.Sector) {
         currentClient.sector = client.Sector;
         localStorage.setItem('lucidia_sector', client.Sector);
@@ -171,15 +191,16 @@ function updateHeaderInfo(client) {
     sidebarAgencyName.textContent = companyName;
   }
 
-  // عرض اللوجو بدقة ودون انكسار
+  // عرض اللوجو بدقة وفوراً
   const logoUrl = client.Logo_URL || (Array.isArray(client.Logo) ? client.Logo[0]?.url : client.Logo);
-  const sidebarLogo = document.getElementById('sidebar-logo') || document.querySelector('header img') || document.querySelector('aside img');
-  if (sidebarLogo && logoUrl && typeof logoUrl === 'string' && logoUrl.startsWith('http')) {
-    sidebarLogo.src = logoUrl;
-    sidebarLogo.classList.remove('hidden');
+  if (logoUrl && typeof logoUrl === 'string' && logoUrl.startsWith('http')) {
+    const allLogos = document.querySelectorAll('#sidebar-logo, header img, aside img, .client-logo-preview');
+    allLogos.forEach(img => {
+      img.src = logoUrl;
+      img.classList.remove('hidden');
+    });
   }
 
-  // تحديث رابط زيارة الموقع المباشر
   const previewLink = document.getElementById('top-preview-link');
   if (previewLink) {
     previewLink.href = `${window.CONFIG.BASE_URL}/index.html?client=${currentClient.whatsapp}`;
@@ -231,7 +252,7 @@ function setVal(elementId, value) {
 }
 
 // ==========================================
-// رفع ومعاينة الصور
+// إدارة الصور
 // ==========================================
 function setupImageUploader() {
   const fileInput = document.getElementById('item-image-input');
@@ -295,7 +316,7 @@ window.removeImage = function(index, event) {
 };
 
 // ==========================================
-// إدارة وحفظ العناصر (منتجات / خدمات قانونية / عيادات)
+// إضافة وعرض وحذف الخدمات / المنتجات
 // ==========================================
 async function handleAddItem(e) {
   if (e) e.preventDefault();
@@ -399,22 +420,9 @@ function exportToCSV() {
   link.click();
 }
 
-window.payViaInstapay = function(planType) {
-  const amount = planType === 'yearly' ? '3,500 ج.م (شامل دومين مجاني)' : '350 ج.م شهرياً';
-  const msg = `مرحباً، أود تجديد اشتراك منصة Lucidia (${planType === 'yearly' ? 'السنوي' : 'الشهري'}) للنشاط: ${currentClient.company_name} - رقم: ${currentClient.whatsapp}`;
-  
-  window.open(window.CONFIG.INSTAPAY_LINK, '_blank');
-
-  setTimeout(() => {
-    const confirmSendReceipt = confirm(
-      `تم فتح رابط الدفع لتطبيق InstaPay.\n\nالمعرف: ${window.CONFIG.INSTAPAY_IPA}\nالقيمة: ${amount}\n\nبعد إتمام التحويل، اضغط موافق لإرسال صورة الإيصال وتفعيل حسابك فوراً.`
-    );
-    if (confirmSendReceipt) {
-      window.open(`https://wa.me/${window.CONFIG.SUPPORT_WHATSAPP}?text=${encodeURIComponent(msg)}`, '_blank');
-    }
-  }, 1000);
-};
-
+// ==========================================
+// إرسال الإعدادات والهوية لـ n8n
+// ==========================================
 function getBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
