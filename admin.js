@@ -1,5 +1,5 @@
 // ==========================================
-// LUCIDIA SAAS - UNIFIED ADMIN DASHBOARD ENGINE (V3.5 - BULLETPROOF DATA FETCH)
+// LUCIDIA SAAS - UNIFIED ADMIN DASHBOARD ENGINE (V3.6 - FINAL)
 // ==========================================
 
 window.CONFIG = window.CONFIG || {
@@ -52,7 +52,6 @@ function unlockDashboard() {
   if (loginModal) loginModal.classList.add('hidden');
   if (mainApp) mainApp.classList.remove('hidden');
 
-  // جلب كافة بيانات العميل والمنتجات فور تسجيل الدخول
   fetchAllClientData();
 }
 
@@ -96,9 +95,6 @@ function customizeSectorUI() {
   }
 }
 
-// ==========================================
-// جلب كافة بيانات العميل والمنتجات (الجزء المعدل السحري)
-// ==========================================
 async function fetchAllClientData() {
   try {
     const res = await fetch(window.CONFIG.WEBHOOK_URL, {
@@ -113,30 +109,22 @@ async function fetchAllClientData() {
     if (res.ok) {
       let rawData = await res.json().catch(() => ({}));
       
-      // 1. فك التغليف لو الداتا جاية في Array من n8n
       if (Array.isArray(rawData)) {
         rawData = rawData[0] || {};
       }
 
-      // 2. فك تغليف Airtable للعميل (fields)
       let client = rawData.client || {};
       if (client.fields) {
         client = { ...client, ...client.fields };
       }
 
-      // 3. فك تغليف Airtable للمنتجات (fields)
       let rawItems = rawData.items || [];
       currentItems = rawItems.map(item => {
         return item.fields ? { ...item, ...item.fields, id: item.id } : item;
       });
 
-      // 4. تحديث الهيدر وعنوان اللوحة
       updateHeaderInfo(client);
-
-      // 5. تعبئة الحقول في كافة التابات
       populateDashboardFields(client);
-
-      // 6. رسم جدول المنتجات
       renderItemsTable();
     }
   } catch (err) {
@@ -145,34 +133,29 @@ async function fetchAllClientData() {
 }
 
 function updateHeaderInfo(client) {
-  const clientName = client.Client_Name || currentClient.client_name;
   const companyName = client.Company_Name || currentClient.company_name;
 
   const headerTitle = document.querySelector('header h1') || document.getElementById('dashboard-header-title');
   if (headerTitle) {
-    headerTitle.innerHTML = `لوحة تحكم المنظومة | <span class="text-blue-600 font-bold">${companyName}</span> (${clientName})`;
+    headerTitle.innerHTML = `لوحة تحكم المنظومة | <span class="text-blue-600 font-bold">${companyName}</span>`;
   }
 
-  // تحديث الاسم في القائمة الجانبية
   const sidebarAgencyName = document.getElementById('sidebar-agency-name');
   if (sidebarAgencyName && companyName) {
     sidebarAgencyName.textContent = companyName;
   }
 
-  // تحديث اللوجو في القائمة الجانبية (لو موجود في Airtable)
   const logoUrl = client.Logo_URL || (Array.isArray(client.Logo) ? client.Logo[0]?.url : client.Logo);
   const sidebarLogo = document.getElementById('sidebar-logo');
   if (sidebarLogo && logoUrl && typeof logoUrl === 'string') {
     sidebarLogo.src = logoUrl;
   }
 
-  // زر زيارة الموقع
   const previewLink = document.getElementById('top-preview-link');
   if (previewLink) {
     previewLink.href = `${window.CONFIG.BASE_URL}/index.html?client=${currentClient.whatsapp}`;
   }
 
-  // حساب الأيام المتبقية للتجربة (14 يوم)
   calculateSubscriptionDays(client);
 }
 
@@ -193,37 +176,22 @@ function calculateSubscriptionDays(client) {
   }
 }
 
+// الدالة المتظبطة على أسماء عواميد إيرتيبل عندك
 function populateDashboardFields(client) {
-  // الهوية والألوان
   setVal('setting-agency-name', client.Company_Name);
-  setVal('setting-color', client.Primary_Color || '#2563eb');
-  setVal('setting-accent-color', client.Accent_Color || '#0ea5e9');
-
-  // محتوى الصفحات والنبذة
-  setVal('hero-title', client.Hero_Title);
-  setVal('hero-subtitle', client.Hero_Subtitle);
-  setVal('about-exp', client.Experience_Years);
-  setVal('about-satisfaction', client.Satisfaction_Rate);
-
-  // السيو ومحركات البحث
+  setVal('setting-color', client.Theme_Color || '#2563eb');
+  setVal('hero-title', client.Slogan);
+  
+  const seoDesc = client['\u2060SEO_Description\u2060'] || client['SEO_Description'] || '';
   setVal('seo-title', client.SEO_Title);
-  setVal('seo-desc', client.SEO_Description);
+  setVal('seo-desc', seoDesc);
 
-  // وسائل التواصل
   setVal('social-whatsapp', client.Whatsapp);
-  setVal('social-phone', client.Phone);
-  setVal('social-maps', client.Maps_URL);
-  setVal('social-facebook', client.Facebook_URL);
-  setVal('social-instagram', client.Instagram_URL);
-
-  // التسويق والبيكسل
-  setVal('mkt-meta', client.Meta_Pixel);
-  setVal('mkt-tiktok', client.Tiktok_Pixel);
-  setVal('mkt-snapchat', client.Snapchat_Pixel);
-  setVal('mkt-ga4', client.GA4_ID);
-
-  // الدومين
-  setVal('custom-domain-input', client.Custom_Domain);
+  setVal('social-facebook', client.Facebook);
+  setVal('social-instagram', client.Instagram);
+  
+  setVal('mkt-meta', client.Meta_Pixel_ID);
+  setVal('mkt-tiktok', client.TikTok);
 }
 
 function setVal(elementId, value) {
@@ -233,9 +201,6 @@ function setVal(elementId, value) {
   }
 }
 
-// ==========================================
-// رفع ومعاينة الصور
-// ==========================================
 function setupImageUploader() {
   const fileInput = document.getElementById('item-image-input');
   if (!fileInput) return;
@@ -297,9 +262,6 @@ window.removeImage = function(index, event) {
   renderImagesPreview();
 };
 
-// ==========================================
-// إدارة العناصر (إضافة - عرض - حذف)
-// ==========================================
 async function handleAddItem(e) {
   if (e) e.preventDefault();
   const title = document.getElementById('item-title')?.value.trim();
@@ -341,6 +303,7 @@ async function handleAddItem(e) {
   }
 }
 
+// الدالة المتظبطة على أسماء عواميد إيرتيبل للمنتجات
 function renderItemsTable() {
   const tableBody = document.getElementById('items-table-body');
   if (!tableBody) return;
@@ -352,10 +315,10 @@ function renderItemsTable() {
 
   tableBody.innerHTML = currentItems.map((item, idx) => `
     <tr class="border-b border-slate-100 text-xs hover:bg-slate-50 transition">
-      <td class="py-3 px-4 font-bold text-slate-800">${item.title || item.Title || '-'}</td>
-      <td class="py-3 px-4 text-blue-600 font-bold">${(item.price || item.Price) ? (item.price || item.Price) + ' ج.م' : 'مجاني'}</td>
-      <td class="py-3 px-4"><span class="bg-slate-100 px-2 py-0.5 rounded text-slate-600">${item.category || item.Category || 'عام'}</span></td>
-      <td class="py-3 px-4 text-slate-500 max-w-xs truncate">${item.description || item.Description || '-'}</td>
+      <td class="py-3 px-4 font-bold text-slate-800">${item.Item_Title || item.title || '-'}</td>
+      <td class="py-3 px-4 text-blue-600 font-bold">${item.Price ? item.Price + ' ج.م' : 'مجاني'}</td>
+      <td class="py-3 px-4"><span class="bg-slate-100 px-2 py-0.5 rounded text-slate-600">${item.Item_Category || 'عام'}</span></td>
+      <td class="py-3 px-4 text-slate-500 max-w-xs truncate">${item.Description || '-'}</td>
       <td class="py-3 px-4 text-center">
         <button onclick="deleteItem('${item.id || item.record_id || idx}')" class="text-red-500 hover:text-red-700 font-bold transition">حذف</button>
       </td>
@@ -389,10 +352,10 @@ function exportToCSV() {
   if (!currentItems.length) return alert('لا توجد بيانات لتصديرها');
   const headers = ['العنوان', 'السعر', 'القسم', 'الوصف'];
   const rows = currentItems.map(i => [
-    `"${i.title || i.Title || ''}"`,
-    i.price || i.Price || 0,
-    `"${i.category || i.Category || ''}"`,
-    `"${i.description || i.Description || ''}"`
+    `"${i.Item_Title || i.title || ''}"`,
+    i.Price || i.price || 0,
+    `"${i.Item_Category || i.category || ''}"`,
+    `"${i.Description || i.description || ''}"`
   ]);
   const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -402,9 +365,6 @@ function exportToCSV() {
   link.click();
 }
 
-// ==========================================
-// تجديد الاشتراك عبر InstaPay
-// ==========================================
 window.payViaInstapay = function(planType) {
   const amount = planType === 'yearly' ? '3,500 ج.م (شامل دومين مجاني)' : '350 ج.م شهرياً';
   const msg = `مرحباً، أود تجديد اشتراك منصة Lucidia (${planType === 'yearly' ? 'السنوي' : 'الشهري'}) للنشاط: ${currentClient.company_name} - رقم: ${currentClient.whatsapp}`;
@@ -421,9 +381,6 @@ window.payViaInstapay = function(planType) {
   }, 1000);
 };
 
-// ==========================================
-// حفظ إعدادات النماذج المختلفة
-// ==========================================
 function getBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
