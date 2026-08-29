@@ -1,10 +1,13 @@
 // ==========================================
-// LUCIDIA SAAS - UNIFIED ADMIN DASHBOARD ENGINE (V3.2)
+// LUCIDIA SAAS - UNIFIED ADMIN DASHBOARD ENGINE (V3.4 - INSTAPAY UPDATED)
 // ==========================================
 
 window.CONFIG = window.CONFIG || {
   WEBHOOK_URL: 'https://n8n.hellolucidagency.com/webhook/14cdad9c-e685-4a4b-aec9-76cd19544ee6',
-  BASE_URL: 'https://app.hellolucidagency.com'
+  BASE_URL: 'https://app.hellolucidagency.com',
+  INSTAPAY_IPA: 'bw.balckwhite@instapay',
+  INSTAPAY_LINK: 'https://ipn.eg/S/bw.balckwhite/instapay/76KcLD',
+  SUPPORT_WHATSAPP: '201111197146'
 };
 
 let currentClient = null;
@@ -24,8 +27,6 @@ async function initDashboard() {
   setupEventListeners();
 
   const savedPass = localStorage.getItem('lucidia_password');
-  const passInput = document.getElementById('admin-pass-input') || document.querySelector('#login-modal input[type="password"]');
-  
   if (savedPass) {
     unlockDashboard();
   }
@@ -51,17 +52,19 @@ function unlockDashboard() {
   if (loginModal) loginModal.classList.add('hidden');
   if (mainApp) mainApp.classList.remove('hidden');
 
-  fetchClientItems();
+  // جلب كافة بيانات العميل والمنتجات فور تسجيل الدخول
+  fetchAllClientData();
 }
 
 function loadClientData() {
   const urlParams = new URLSearchParams(window.location.search);
-  const clientWhatsapp = urlParams.get('client') || localStorage.getItem('lucidia_whatsapp') || '01111197146';
-  const sectorParam = urlParams.get('sector') || localStorage.getItem('lucidia_sector') || 'Lucidia Estate';
+  const clientWhatsapp = urlParams.get('client') || localStorage.getItem('lucidia_whatsapp') || '01110737888';
+  const sectorParam = urlParams.get('sector') || localStorage.getItem('lucidia_sector') || 'Lucidia Clinics';
 
   currentClient = {
     whatsapp: clientWhatsapp,
     sector: sectorParam,
+    client_name: localStorage.getItem('lucidia_client_name') || 'العميل',
     company_name: localStorage.getItem('lucidia_company_name') || 'منصتي'
   };
 
@@ -70,7 +73,7 @@ function loadClientData() {
 }
 
 function customizeSectorUI() {
-  const sector = currentClient?.sector || 'Lucidia Estate';
+  const sector = currentClient?.sector || 'Lucidia Clinics';
   
   const platform1Label = document.getElementById('label-platform-1');
   const platform2Label = document.getElementById('label-platform-2');
@@ -81,20 +84,123 @@ function customizeSectorUI() {
   if (sector.includes('Clinics') || sector.includes('عيادات')) {
     if (platform1Label) platform1Label.innerText = '🩺 حساب فيزيتا (Vezeeta)';
     if (platform2Label) platform2Label.innerText = '🏥 حساب كلينيدو (CliniDo)';
-    if (itemTitleLabel) itemTitleLabel.innerText = 'اسم الخدمة الطبية / الحالة (قبل وبعد) *';
+    if (itemTitleLabel) itemTitleLabel.innerText = 'اسم الخدمة الطبية / الحالة *';
     if (itemPriceLabel) itemPriceLabel.innerText = 'سعر الكشف / الإجراء (ج.م)';
     if (itemCategoryLabel) itemCategoryLabel.innerText = 'القسم الطبي';
   } else if (sector.includes('Estate') || sector.includes('عقارات')) {
     if (platform1Label) platform1Label.innerText = '🏢 معرض عقارماب (Aqarmap)';
     if (platform2Label) platform2Label.innerText = '🏠 حساب بروبرتي فايندر (Property Finder)';
-    if (itemTitleLabel) itemTitleLabel.innerText = 'عنوان العقار / الوحدة *';
+    if (itemTitleLabel) itemTitleLabel.innerText = 'عنوان العقار / المشروع *';
     if (itemPriceLabel) itemPriceLabel.innerText = 'السعر الإجمالي (ج.م)';
-    if (itemCategoryLabel) itemCategoryLabel.innerText = 'نوع العقار';
+    if (itemCategoryLabel) itemCategoryLabel.innerText = 'نوع العقار / تشطيبات';
   }
 }
 
 // ==========================================
-// رفع ومعاينة الصور والـ Hero مع زر الحذف (X)
+// جلب كافة بيانات العميل والمنتجات (Fetch & Populate)
+// ==========================================
+async function fetchAllClientData() {
+  try {
+    const res = await fetch(window.CONFIG.WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        action: 'get_client_data', 
+        client_whatsapp: currentClient.whatsapp 
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      const client = data.client || {};
+      currentItems = data.items || [];
+
+      // 1. تحديث الهيدر وعنوان اللوحة
+      updateHeaderInfo(client);
+
+      // 2. تعبئة الحقول في كافة التابات
+      populateDashboardFields(client);
+
+      // 3. رسم جدول المنتجات
+      renderItemsTable();
+    }
+  } catch (err) {
+    console.warn('⚠️ تعذر جلب البيانات التلقائية:', err);
+  }
+}
+
+function updateHeaderInfo(client) {
+  const clientName = client.Client_Name || currentClient.client_name;
+  const companyName = client.Company_Name || currentClient.company_name;
+
+  const headerTitle = document.querySelector('header h1') || document.getElementById('dashboard-header-title');
+  if (headerTitle) {
+    headerTitle.innerHTML = `لوحة تحكم المنظومة | <span class="text-blue-600 font-bold">${companyName}</span> (${clientName})`;
+  }
+
+  // حساب الأيام المتبقية للتجربة (14 يوم)
+  calculateSubscriptionDays(client);
+}
+
+function calculateSubscriptionDays(client) {
+  const createdTime = client.Created_Time || client.created_at || new Date();
+  const startDate = new Date(createdTime);
+  const now = new Date();
+  const diffDays = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
+  const remainingDays = Math.max(0, 14 - diffDays);
+
+  const subBadge = document.getElementById('subscription-status-badge') || document.querySelector('.subscription-badge');
+  if (subBadge) {
+    if (client.Payment_Status === 'مدفوع' || client.Payment_Status === 'Active') {
+      subBadge.innerHTML = `<span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold">اشتراك نشط ⭐</span>`;
+    } else {
+      subBadge.innerHTML = `<span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold">تجريبي: متبقي ${remainingDays} يوم</span>`;
+    }
+  }
+}
+
+function populateDashboardFields(client) {
+  // الهوية والألوان
+  setVal('setting-agency-name', client.Company_Name);
+  setVal('setting-color', client.Primary_Color || '#2563eb');
+  setVal('setting-accent-color', client.Accent_Color || '#0ea5e9');
+
+  // محتوى الصفحات والنبذة
+  setVal('hero-title', client.Hero_Title);
+  setVal('hero-subtitle', client.Hero_Subtitle);
+  setVal('about-exp', client.Experience_Years);
+  setVal('about-satisfaction', client.Satisfaction_Rate);
+
+  // السيو ومحركات البحث
+  setVal('seo-title', client.SEO_Title);
+  setVal('seo-desc', client.SEO_Description);
+
+  // وسائل التواصل
+  setVal('social-whatsapp', client.Whatsapp);
+  setVal('social-phone', client.Phone);
+  setVal('social-maps', client.Maps_URL);
+  setVal('social-facebook', client.Facebook_URL);
+  setVal('social-instagram', client.Instagram_URL);
+
+  // التسويق والبيكسل
+  setVal('mkt-meta', client.Meta_Pixel);
+  setVal('mkt-tiktok', client.Tiktok_Pixel);
+  setVal('mkt-snapchat', client.Snapchat_Pixel);
+  setVal('mkt-ga4', client.GA4_ID);
+
+  // الدومين
+  setVal('custom-domain-input', client.Custom_Domain);
+}
+
+function setVal(elementId, value) {
+  const el = document.getElementById(elementId);
+  if (el && value !== undefined && value !== null) {
+    el.value = value;
+  }
+}
+
+// ==========================================
+// رفع ومعاينة الصور
 // ==========================================
 function setupImageUploader() {
   const fileInput = document.getElementById('item-image-input');
@@ -115,7 +221,6 @@ function setupImageUploader() {
       };
       reader.readAsDataURL(file);
     });
-    // تفريغ الانبوت عشان لو اختار نفس الصورة تاني تشتغل
     fileInput.value = '';
   });
 }
@@ -138,7 +243,6 @@ function renderImagesPreview() {
       </button>
     `;
     
-    // النقر على الصورة يخليها الغلاف
     div.addEventListener('click', () => {
       heroImageIndex = index;
       renderImagesPreview();
@@ -150,11 +254,9 @@ function renderImagesPreview() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// دالة مسح الصورة
 window.removeImage = function(index, event) {
-  event.stopPropagation(); // عشان النقر ما يخليهاش غلاف
+  event.stopPropagation();
   uploadedImages.splice(index, 1);
-  // إعادة ضبط الغلاف لو مسحنا الغلاف الحالي
   if (heroImageIndex >= uploadedImages.length) {
     heroImageIndex = 0;
   }
@@ -162,20 +264,17 @@ window.removeImage = function(index, event) {
 };
 
 // ==========================================
-// حفظ العناصر وإرسال مصفوفة الصور لـ n8n
+// إدارة العناصر (إضافة - عرض - حذف)
 // ==========================================
 async function handleAddItem(e) {
   if (e) e.preventDefault();
   const title = document.getElementById('item-title')?.value.trim();
   if (!title) return alert('يرجى كتابة الاسم/العنوان');
 
-  // تجهيز مصفوفة الصور زي ما n8n عايزها
-  const imagesArray = uploadedImages.map(img => {
-    return {
-      name: img.file.name,
-      data: img.url
-    };
-  });
+  const imagesArray = uploadedImages.map(img => ({
+    name: img.file.name,
+    data: img.url
+  }));
 
   const payload = {
     action: 'add_item',
@@ -201,52 +300,66 @@ async function handleAddItem(e) {
       uploadedImages = [];
       heroImageIndex = 0;
       renderImagesPreview();
-      fetchClientItems();
+      fetchAllClientData();
     }
   } catch (err) {
     alert('❌ خطأ أثناء الحفظ');
   }
 }
 
-async function fetchClientItems() {
-  try {
-    const res = await fetch(window.CONFIG.WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'get_client_items', client_whatsapp: currentClient.whatsapp })
-    });
-    if (res.ok) {
-      const data = await res.json().catch(() => []);
-      currentItems = Array.isArray(data) ? data : (data.items || []);
-      renderItemsTable();
-    }
-  } catch (e) {}
-}
-
 function renderItemsTable() {
   const tableBody = document.getElementById('items-table-body');
   if (!tableBody) return;
 
-  if (currentItems.length === 0) {
+  if (!currentItems || currentItems.length === 0) {
     tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400 text-xs">لا توجد عناصر مضافة حتى الآن.</td></tr>`;
     return;
   }
 
-  tableBody.innerHTML = currentItems.map(item => `
-    <tr class="border-b border-slate-100 text-xs">
-      <td class="py-3 px-4 font-bold text-slate-800">${item.title || '-'}</td>
-      <td class="py-3 px-4 text-blue-600 font-bold">${item.price ? item.price + ' ج.م' : 'مجاني'}</td>
-      <td class="py-3 px-4">${item.category || 'عام'}</td>
-      <td class="py-3 px-4 text-slate-500">${item.description || '-'}</td>
-      <td class="py-3 px-4 text-center"><button class="text-red-500 font-bold">حذف</button></td>
+  tableBody.innerHTML = currentItems.map((item, idx) => `
+    <tr class="border-b border-slate-100 text-xs hover:bg-slate-50 transition">
+      <td class="py-3 px-4 font-bold text-slate-800">${item.title || item.Title || '-'}</td>
+      <td class="py-3 px-4 text-blue-600 font-bold">${(item.price || item.Price) ? (item.price || item.Price) + ' ج.م' : 'مجاني'}</td>
+      <td class="py-3 px-4"><span class="bg-slate-100 px-2 py-0.5 rounded text-slate-600">${item.category || item.Category || 'عام'}</span></td>
+      <td class="py-3 px-4 text-slate-500 max-w-xs truncate">${item.description || item.Description || '-'}</td>
+      <td class="py-3 px-4 text-center">
+        <button onclick="deleteItem('${item.id || item.record_id || idx}')" class="text-red-500 hover:text-red-700 font-bold transition">حذف</button>
+      </td>
     </tr>
   `).join('');
 }
 
+window.deleteItem = async function(itemId) {
+  if (!confirm('هل أنت متأكد من حذف هذا العنصر نهائياً؟')) return;
+
+  try {
+    const res = await fetch(window.CONFIG.WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'delete_item',
+        item_id: itemId,
+        client_whatsapp: currentClient.whatsapp
+      })
+    });
+    if (res.ok) {
+      alert('🗑️ تم الحذف بنجاح');
+      fetchAllClientData();
+    }
+  } catch (e) {
+    alert('❌ تعذر حذف العنصر');
+  }
+};
+
 function exportToCSV() {
   if (!currentItems.length) return alert('لا توجد بيانات لتصديرها');
   const headers = ['العنوان', 'السعر', 'القسم', 'الوصف'];
-  const rows = currentItems.map(i => [`"${i.title || ''}"`, i.price || 0, `"${i.category || ''}"`, `"${i.description || ''}"`]);
+  const rows = currentItems.map(i => [
+    `"${i.title || i.Title || ''}"`,
+    i.price || i.Price || 0,
+    `"${i.category || i.Category || ''}"`,
+    `"${i.description || i.Description || ''}"`
+  ]);
   const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
@@ -255,21 +368,29 @@ function exportToCSV() {
   link.click();
 }
 
-function setupEventListeners() {
-  const formItem = document.getElementById('form-add-item');
-  if (formItem) formItem.addEventListener('submit', handleAddItem);
+// ==========================================
+// تجديد الاشتراك عبر InstaPay
+// ==========================================
+window.payViaInstapay = function(planType) {
+  const amount = planType === 'yearly' ? '3,500 ج.م (شامل دومين مجاني)' : '350 ج.م شهرياً';
+  const msg = `مرحباً، أود تجديد اشتراك منصة Lucidia (${planType === 'yearly' ? 'السنوي' : 'الشهري'}) للنشاط: ${currentClient.company_name} - رقم: ${currentClient.whatsapp}`;
+  
+  // فتح رابط الدفع المباشر في انستاباي
+  window.open(window.CONFIG.INSTAPAY_LINK, '_blank');
 
-  const btnExport = document.getElementById('btn-export-csv');
-  if (btnExport) btnExport.addEventListener('click', exportToCSV);
-
-  const loginBtn = document.querySelector('#login-modal button');
-  if (loginBtn && !loginBtn.getAttribute('onclick')) {
-    loginBtn.addEventListener('click', window.checkPass);
-  }
-}
+  // تنبيه المستخدم لإرسال الإشعار بعد التحويل
+  setTimeout(() => {
+    const confirmSendReceipt = confirm(
+      `تم فتح رابط الدفع لتطبيق InstaPay.\n\nالمعرف: ${window.CONFIG.INSTAPAY_IPA}\nالقيمة: ${amount}\n\nبعد إتمام التحويل، اضغط موافق لإرسال صورة الإيصال وتفعيل حسابك فوراً.`
+    );
+    if (confirmSendReceipt) {
+      window.open(`https://wa.me/${window.CONFIG.SUPPORT_WHATSAPP}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+  }, 1000);
+};
 
 // ==========================================
-// دوال حفظ الإعدادات (الهوية والسيو وغيرها)
+// حفظ إعدادات النماذج المختلفة
 // ==========================================
 function getBase64(file) {
   return new Promise((resolve, reject) => {
@@ -278,15 +399,6 @@ function getBase64(file) {
     reader.onload = () => resolve(reader.result);
     reader.onerror = error => reject(error);
   });
-}
-
-function updateFileName(input, textId) {
-  const nameDisplay = document.getElementById(textId);
-  if (input.files && input.files.length > 0) {
-    nameDisplay.textContent = input.files[0].name;
-  } else {
-    nameDisplay.textContent = '';
-  }
 }
 
 async function sendDataToN8n(payload) {
@@ -298,6 +410,7 @@ async function sendDataToN8n(payload) {
     });
     if (res.ok) {
       alert('✅ تم الحفظ بنجاح!');
+      fetchAllClientData();
     } else {
       alert('❌ حدث خطأ أثناء الحفظ في السيرفر.');
     }
@@ -391,4 +504,20 @@ async function handleContentSubmit(e) {
     about_satisfaction: document.getElementById('about-satisfaction')?.value,
   };
   await sendDataToN8n(payload);
+}
+
+function setupEventListeners() {
+  const formItem = document.getElementById('form-add-item');
+  if (formItem) formItem.addEventListener('submit', handleAddItem);
+
+  const btnExport = document.getElementById('btn-export-csv');
+  if (btnExport) btnExport.addEventListener('click', exportToCSV);
+
+  // ربط نماذج الحفظ المختلفة
+  document.getElementById('form-settings')?.addEventListener('submit', handleSettingsSubmit);
+  document.getElementById('form-social')?.addEventListener('submit', handleSocialSubmit);
+  document.getElementById('form-seo')?.addEventListener('submit', handleSeoSubmit);
+  document.getElementById('form-marketing')?.addEventListener('submit', handleMarketingSubmit);
+  document.getElementById('form-domain')?.addEventListener('submit', handleDomainSubmit);
+  document.getElementById('form-content')?.addEventListener('submit', handleContentSubmit);
 }
