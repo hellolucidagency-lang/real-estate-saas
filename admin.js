@@ -1,5 +1,5 @@
 // ==========================================
-// LUCIDIA SAAS - UNIFIED ADMIN DASHBOARD ENGINE (V3.6 - FINAL)
+// LUCIDIA SAAS - UNIFIED ADMIN DASHBOARD ENGINE (V4.0 - FULL SECTORS & DATA SYNC)
 // ==========================================
 
 window.CONFIG = window.CONFIG || {
@@ -58,7 +58,7 @@ function unlockDashboard() {
 function loadClientData() {
   const urlParams = new URLSearchParams(window.location.search);
   const clientWhatsapp = urlParams.get('client') || localStorage.getItem('lucidia_whatsapp') || '01110737888';
-  const sectorParam = urlParams.get('sector') || localStorage.getItem('lucidia_sector') || 'Lucidia Clinics';
+  const sectorParam = urlParams.get('sector') || localStorage.getItem('lucidia_sector') || 'Lucidia Pro';
 
   currentClient = {
     whatsapp: clientWhatsapp,
@@ -71,30 +71,49 @@ function loadClientData() {
   localStorage.setItem('lucidia_sector', sectorParam);
 }
 
+// ==========================================
+// تخصيص واجهة المستخدم بدقة لجميع القطاعات الثلاثة
+// ==========================================
 function customizeSectorUI() {
-  const sector = currentClient?.sector || 'Lucidia Clinics';
+  const sector = (currentClient?.sector || '').toLowerCase();
   
   const platform1Label = document.getElementById('label-platform-1');
   const platform2Label = document.getElementById('label-platform-2');
   const itemTitleLabel = document.getElementById('label-item-title');
   const itemPriceLabel = document.getElementById('label-item-price');
   const itemCategoryLabel = document.getElementById('label-item-category');
+  const tabsSubtitle = document.querySelector('.section-header-subtitle') || document.getElementById('section-subtitle');
 
-  if (sector.includes('Clinics') || sector.includes('عيادات')) {
+  if (sector.includes('clinic') || sector.includes('عياد')) {
+    // 🩺 قطاع العيادات والرعاية الصحية
     if (platform1Label) platform1Label.innerText = '🩺 حساب فيزيتا (Vezeeta)';
-    if (platform2Label) platform2Label.innerText = '🏥 حساب كلينيدو (CliniDo)';
+    if (platform2Label) platform2Label.innerText = '🏥 حساب كلينيدو / سينا (CliniDo/Sena)';
     if (itemTitleLabel) itemTitleLabel.innerText = 'اسم الخدمة الطبية / الحالة *';
     if (itemPriceLabel) itemPriceLabel.innerText = 'سعر الكشف / الإجراء (ج.م)';
-    if (itemCategoryLabel) itemCategoryLabel.innerText = 'القسم الطبي';
-  } else if (sector.includes('Estate') || sector.includes('عقارات')) {
+    if (itemCategoryLabel) itemCategoryLabel.innerText = 'القسم الطبي (أسنان، باطنة، جلدية...)';
+    if (tabsSubtitle) tabsSubtitle.innerText = 'إدارة الخدمات الطبية والعيادة';
+  } else if (sector.includes('pro') || sector.includes('قانون') || sector.includes('محام')) {
+    // ⚖️ قطاع المحاماة والاستشارات القانونية
+    if (platform1Label) platform1Label.innerText = '⚖️ رقم القيد بنقابة المحامين / الدليل المهني';
+    if (platform2Label) platform2Label.innerText = '💼 حساب لينكد إن المهني (LinkedIn)';
+    if (itemTitleLabel) itemTitleLabel.innerText = 'اسم الخدمة القانونية / الاستشارة *';
+    if (itemPriceLabel) itemPriceLabel.innerText = 'أتعاب الاستشارة / التوكيل (ج.م)';
+    if (itemCategoryLabel) itemCategoryLabel.innerText = 'التخصص القانوني (شركات، عقود، جنائي، مدني)';
+    if (tabsSubtitle) tabsSubtitle.innerText = 'إدارة الخدمات والاستشارات القانونية للمكتب';
+  } else {
+    // 🏢 قطاع العقارات والتسويق العقاري (الافتراضي)
     if (platform1Label) platform1Label.innerText = '🏢 معرض عقارماب (Aqarmap)';
     if (platform2Label) platform2Label.innerText = '🏠 حساب بروبرتي فايندر (Property Finder)';
     if (itemTitleLabel) itemTitleLabel.innerText = 'عنوان العقار / المشروع *';
     if (itemPriceLabel) itemPriceLabel.innerText = 'السعر الإجمالي (ج.م)';
     if (itemCategoryLabel) itemCategoryLabel.innerText = 'نوع العقار / تشطيبات';
+    if (tabsSubtitle) tabsSubtitle.innerText = 'إدارة الوحدات والعقارات المعروضة';
   }
 }
 
+// ==========================================
+// جلب وعرض البيانات من Airtable عبر n8n
+// ==========================================
 async function fetchAllClientData() {
   try {
     const res = await fetch(window.CONFIG.WEBHOOK_URL, {
@@ -118,6 +137,13 @@ async function fetchAllClientData() {
         client = { ...client, ...client.fields };
       }
 
+      // تحديث القطاع لو راجع من قاعدة البيانات
+      if (client.Sector) {
+        currentClient.sector = client.Sector;
+        localStorage.setItem('lucidia_sector', client.Sector);
+        customizeSectorUI();
+      }
+
       let rawItems = rawData.items || [];
       currentItems = rawItems.map(item => {
         return item.fields ? { ...item, ...item.fields, id: item.id } : item;
@@ -136,21 +162,24 @@ function updateHeaderInfo(client) {
   const companyName = client.Company_Name || currentClient.company_name;
 
   const headerTitle = document.querySelector('header h1') || document.getElementById('dashboard-header-title');
-  if (headerTitle) {
+  if (headerTitle && companyName && companyName !== 'منصتي') {
     headerTitle.innerHTML = `لوحة تحكم المنظومة | <span class="text-blue-600 font-bold">${companyName}</span>`;
   }
 
   const sidebarAgencyName = document.getElementById('sidebar-agency-name');
-  if (sidebarAgencyName && companyName) {
+  if (sidebarAgencyName && companyName && companyName !== 'منصتي') {
     sidebarAgencyName.textContent = companyName;
   }
 
+  // عرض اللوجو بدقة ودون انكسار
   const logoUrl = client.Logo_URL || (Array.isArray(client.Logo) ? client.Logo[0]?.url : client.Logo);
-  const sidebarLogo = document.getElementById('sidebar-logo');
-  if (sidebarLogo && logoUrl && typeof logoUrl === 'string') {
+  const sidebarLogo = document.getElementById('sidebar-logo') || document.querySelector('header img') || document.querySelector('aside img');
+  if (sidebarLogo && logoUrl && typeof logoUrl === 'string' && logoUrl.startsWith('http')) {
     sidebarLogo.src = logoUrl;
+    sidebarLogo.classList.remove('hidden');
   }
 
+  // تحديث رابط زيارة الموقع المباشر
   const previewLink = document.getElementById('top-preview-link');
   if (previewLink) {
     previewLink.href = `${window.CONFIG.BASE_URL}/index.html?client=${currentClient.whatsapp}`;
@@ -160,7 +189,7 @@ function updateHeaderInfo(client) {
 }
 
 function calculateSubscriptionDays(client) {
-  const createdTime = client.Created_Time || client.created_at || new Date();
+  const createdTime = client['تاريخ الاشتراك'] || client.Created_Time || client.created_at || new Date();
   const startDate = new Date(createdTime);
   const now = new Date();
   const diffDays = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
@@ -168,7 +197,7 @@ function calculateSubscriptionDays(client) {
 
   const subBadge = document.getElementById('subscription-status-badge') || document.querySelector('.subscription-badge');
   if (subBadge) {
-    if (client.Payment_Status === 'مدفوع' || client.Payment_Status === 'Active') {
+    if (client['حالة الدفع'] === 'مدفوع' || client.Payment_Status === 'Active') {
       subBadge.innerHTML = `<span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold">اشتراك نشط ⭐</span>`;
     } else {
       subBadge.innerHTML = `<span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold">تجريبي: متبقي ${remainingDays} يوم</span>`;
@@ -176,7 +205,6 @@ function calculateSubscriptionDays(client) {
   }
 }
 
-// الدالة المتظبطة على أسماء عواميد إيرتيبل عندك
 function populateDashboardFields(client) {
   setVal('setting-agency-name', client.Company_Name);
   setVal('setting-color', client.Theme_Color || '#2563eb');
@@ -189,9 +217,10 @@ function populateDashboardFields(client) {
   setVal('social-whatsapp', client.Whatsapp);
   setVal('social-facebook', client.Facebook);
   setVal('social-instagram', client.Instagram);
+  setVal('social-tiktok', client.TikTok);
+  setVal('social-linkedin', client.LinkedIn);
   
   setVal('mkt-meta', client.Meta_Pixel_ID);
-  setVal('mkt-tiktok', client.TikTok);
 }
 
 function setVal(elementId, value) {
@@ -201,6 +230,9 @@ function setVal(elementId, value) {
   }
 }
 
+// ==========================================
+// رفع ومعاينة الصور
+// ==========================================
 function setupImageUploader() {
   const fileInput = document.getElementById('item-image-input');
   if (!fileInput) return;
@@ -262,6 +294,9 @@ window.removeImage = function(index, event) {
   renderImagesPreview();
 };
 
+// ==========================================
+// إدارة وحفظ العناصر (منتجات / خدمات قانونية / عيادات)
+// ==========================================
 async function handleAddItem(e) {
   if (e) e.preventDefault();
   const title = document.getElementById('item-title')?.value.trim();
@@ -303,7 +338,6 @@ async function handleAddItem(e) {
   }
 }
 
-// الدالة المتظبطة على أسماء عواميد إيرتيبل للمنتجات
 function renderItemsTable() {
   const tableBody = document.getElementById('items-table-body');
   if (!tableBody) return;
@@ -316,9 +350,9 @@ function renderItemsTable() {
   tableBody.innerHTML = currentItems.map((item, idx) => `
     <tr class="border-b border-slate-100 text-xs hover:bg-slate-50 transition">
       <td class="py-3 px-4 font-bold text-slate-800">${item.Item_Title || item.title || '-'}</td>
-      <td class="py-3 px-4 text-blue-600 font-bold">${item.Price ? item.Price + ' ج.م' : 'مجاني'}</td>
-      <td class="py-3 px-4"><span class="bg-slate-100 px-2 py-0.5 rounded text-slate-600">${item.Item_Category || 'عام'}</span></td>
-      <td class="py-3 px-4 text-slate-500 max-w-xs truncate">${item.Description || '-'}</td>
+      <td class="py-3 px-4 text-blue-600 font-bold">${(item.Price || item.price) ? (item.Price || item.price) + ' ج.م' : 'مجاني / حسب الاتفاق'}</td>
+      <td class="py-3 px-4"><span class="bg-slate-100 px-2 py-0.5 rounded text-slate-600">${item.Item_Category || item.category || 'عام'}</span></td>
+      <td class="py-3 px-4 text-slate-500 max-w-xs truncate">${item.Description || item.description || '-'}</td>
       <td class="py-3 px-4 text-center">
         <button onclick="deleteItem('${item.id || item.record_id || idx}')" class="text-red-500 hover:text-red-700 font-bold transition">حذف</button>
       </td>
@@ -444,6 +478,8 @@ async function handleSocialSubmit(e) {
     maps: document.getElementById('social-maps')?.value,
     facebook: document.getElementById('social-facebook')?.value,
     instagram: document.getElementById('social-instagram')?.value,
+    tiktok: document.getElementById('social-tiktok')?.value,
+    linkedin: document.getElementById('social-linkedin')?.value,
   };
   await sendDataToN8n(payload);
 }
