@@ -1,5 +1,5 @@
 // ==========================================
-// LUCIDIA SAAS - UNIFIED ADMIN DASHBOARD ENGINE (V5.0 - FULL INTERACTIVITY)
+// LUCIDIA SAAS - UNIFIED ADMIN DASHBOARD ENGINE (V6.0 - FULL INTERACTIVITY / AIRTABLE MAPPED)
 // ==========================================
 
 window.CONFIG = window.CONFIG || {
@@ -9,6 +9,19 @@ window.CONFIG = window.CONFIG || {
   INSTAPAY_LINK: 'https://ipn.eg/S/bw.balckwhite/instapay/76KcLD',
   SUPPORT_WHATSAPP: '201111197146'
 };
+
+// أسماء التابات الحقيقية المستخدمة في الـ HTML (بادئة sec- / nav-)
+const VALID_TABS = [
+  'properties-list',
+  'properties-add',
+  'settings-general',
+  'settings-domain',
+  'settings-content',
+  'settings-seo',
+  'settings-social',
+  'marketing',
+  'subscription'
+];
 
 let currentClient = null;
 let currentItems = [];
@@ -31,18 +44,29 @@ async function initDashboard() {
   if (savedPass) {
     unlockDashboard();
   }
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// ==========================================
+// تسجيل الدخول
+// ==========================================
 window.checkPass = function() {
-  const passInput = document.querySelector('#login-modal input[type="password"]') || document.getElementById('admin-pass-input');
+  const passInput = document.getElementById('admin-pass');
   const inputVal = passInput ? passInput.value.trim() : '';
   const expectedPass = localStorage.getItem('lucidia_password');
+  const errMsg = document.getElementById('pass-err');
 
   if (!expectedPass || inputVal === expectedPass || inputVal === '55555' || inputVal.length >= 4) {
     if (inputVal) localStorage.setItem('lucidia_password', inputVal);
+    if (errMsg) errMsg.classList.add('hidden');
     unlockDashboard();
   } else {
-    alert('❌ كلمة المرور غير صحيحة');
+    if (errMsg) {
+      errMsg.classList.remove('hidden');
+    } else {
+      alert('❌ كلمة المرور غير صحيحة');
+    }
   }
 };
 
@@ -56,6 +80,14 @@ function unlockDashboard() {
   fetchAllClientData();
 }
 
+window.logout = function() {
+  localStorage.removeItem('lucidia_password');
+  location.reload();
+};
+
+// ==========================================
+// تحميل بيانات العميل من الرابط أو التخزين المحلي
+// ==========================================
 function loadClientData() {
   const urlParams = new URLSearchParams(window.location.search);
   const clientWhatsapp = urlParams.get('client') || localStorage.getItem('lucidia_whatsapp') || '01110737888';
@@ -73,133 +105,233 @@ function loadClientData() {
 }
 
 // ==========================================
-// تفعيل الضغط والتنقل بين التبويبات والأقسام
+// التنقل بين التابات (القائمة الجانبية بالكامل)
 // ==========================================
 function setupNavigationTabs() {
-  const navButtons = document.querySelectorAll('[data-tab], aside button, aside a');
-  
-  navButtons.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const targetTabId = btn.getAttribute('data-tab') || getTabIdFromText(btn.innerText);
-      if (targetTabId) {
+  // كل أزرار السايدبار الحقيقية معرّفة بـ id="nav-<tab>" وتستدعي بالفعل
+  // onclick="switchTab('<tab>')" داخل الـ HTML، لكن نضيف هنا ربطاً إضافياً
+  // عبر JS لضمان عملها حتى لو تم حذف onclick من الـ HTML مستقبلاً.
+  VALID_TABS.forEach(tabName => {
+    const btn = document.getElementById('nav-' + tabName);
+    if (btn) {
+      btn.addEventListener('click', (e) => {
         e.preventDefault();
-        switchTab(targetTabId);
+        switchTab(tabName);
+      });
+    }
+  });
+
+  // أي زر آخر يحمل data-tab بنفس الأسماء الصحيحة
+  document.querySelectorAll('[data-tab]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const tabName = btn.getAttribute('data-tab');
+      if (tabName && VALID_TABS.includes(tabName)) {
+        e.preventDefault();
+        switchTab(tabName);
       }
     });
   });
-
-  const addBtns = document.querySelectorAll('#btn-add-new-item, [onclick*="form-add-item"], [data-action="add-item"]');
-  addBtns.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      switchTab('tab-add-item');
-    });
-  });
 }
 
-function getTabIdFromText(text) {
-  if (!text) return null;
-  const t = text.trim();
-  if (t.includes('جميع العناصر') || t.includes('المنتجات') || t.includes('الخدمات')) return 'tab-items-list';
-  if (t.includes('إضافة عنصر') || t.includes('إضافة جديد')) return 'tab-add-item';
-  if (t.includes('الهوية') || t.includes('البيانات العامة')) return 'tab-settings';
-  if (t.includes('رابط الموقع') || t.includes('الدومين')) return 'tab-domain';
-  if (t.includes('محتوى الصفحة') || t.includes('النبذة')) return 'tab-content';
-  if (t.includes('محركات البحث') || t.includes('SEO')) return 'tab-seo';
-  if (t.includes('وسائل التواصل') || t.includes('الموقع')) return 'tab-social';
-  if (t.includes('التسويق') || t.includes('الاشتراكات')) return 'tab-marketing';
-  return null;
-}
-
-window.switchTab = function(tabId) {
-  const allTabs = document.querySelectorAll('.tab-content, [id^="tab-"], [id^="section-"]');
-  allTabs.forEach(tab => {
-    tab.classList.add('hidden');
-  });
-
-  let targetTab = document.getElementById(tabId);
-  if (!targetTab) {
-    if (tabId === 'tab-items-list') targetTab = document.getElementById('section-items') || document.getElementById('items-view');
-    if (tabId === 'tab-add-item') targetTab = document.getElementById('section-add-item') || document.getElementById('form-add-item')?.parentElement;
-    if (tabId === 'tab-settings') targetTab = document.getElementById('section-settings') || document.getElementById('form-settings')?.parentElement;
+// دالة التبديل الرئيسية - تطابق تماماً معرفات الأقسام sec-* والأزرار nav-*
+window.switchTab = function(tabName) {
+  if (!VALID_TABS.includes(tabName)) {
+    console.warn('⚠️ اسم تاب غير معروف:', tabName);
+    return;
   }
 
-  if (targetTab) {
-    targetTab.classList.remove('hidden');
+  document.querySelectorAll('main > section').forEach(sec => sec.classList.add('hidden'));
+  document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+
+  const targetSec = document.getElementById('sec-' + tabName);
+  if (targetSec) targetSec.classList.remove('hidden');
+
+  const targetBtn = document.getElementById('nav-' + tabName);
+  if (targetBtn) targetBtn.classList.add('active');
+
+  if (tabName === 'properties-add') {
+    prepareAddItemForm();
   }
 
-  const allNavBtns = document.querySelectorAll('[data-tab], aside button, aside a');
-  allNavBtns.forEach(btn => {
-    btn.classList.remove('bg-blue-600', 'text-white', 'font-bold');
-  });
+  if (window.innerWidth < 768) {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar && sidebar.classList.contains('right-0')) {
+      toggleSidebar();
+    }
+  }
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 };
 
+function prepareAddItemForm() {
+  const form = document.getElementById('form-add-item');
+  const title = document.getElementById('prop-form-title');
+  if (form) form.reset();
+  if (title) title.textContent = 'إضافة عنصر جديد';
+  uploadedImages = [];
+  heroImageIndex = 0;
+  renderImagesPreview();
+}
+
+// ==========================================
+// زر تبديل السايدبار (موبايل)
+// ==========================================
+window.toggleSidebar = function() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  if (!sidebar) return;
+
+  if (sidebar.classList.contains('-right-full')) {
+    sidebar.classList.remove('-right-full');
+    sidebar.classList.add('right-0');
+    if (overlay) overlay.classList.remove('hidden');
+  } else {
+    sidebar.classList.add('-right-full');
+    sidebar.classList.remove('right-0');
+    if (overlay) overlay.classList.add('hidden');
+  }
+};
+
+window.toggleDarkMode = function() {
+  document.getElementById('html-root')?.classList.toggle('dark');
+  const icon = document.getElementById('dark-icon');
+  if (icon) {
+    const isDark = document.getElementById('html-root')?.classList.contains('dark');
+    icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+};
+
+window.toggleHelpMenu = function() {
+  document.getElementById('help-menu')?.classList.toggle('hidden');
+};
+
+window.openInstapayModal = function() {
+  const modal = document.getElementById('instapay-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+};
+
+window.closeInstapayModal = function() {
+  const modal = document.getElementById('instapay-modal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+};
+
+// ==========================================
+// تخصيص الواجهة حسب القطاع (Dynamic UI)
+// ==========================================
 function customizeSectorUI() {
   const sector = (currentClient?.sector || '').toLowerCase();
-  
-  const platform1Label = document.getElementById('label-platform-1');
-  const platform2Label = document.getElementById('label-platform-2');
+
   const itemTitleLabel = document.getElementById('label-item-title');
   const itemPriceLabel = document.getElementById('label-item-price');
   const itemCategoryLabel = document.getElementById('label-item-category');
+  const platform1Label = document.getElementById('label-platform-1');
+  const platform2Label = document.getElementById('label-platform-2');
+  const listTitle = document.getElementById('list-title');
 
-  const filterButtons = document.querySelectorAll('.filter-container, .tabs-filter, [id*="filter"]');
-  let filterContainer = filterButtons.length > 0 ? filterButtons[0] : null;
+  const filterContainer = document.getElementById('filter-group-estate');
 
   if (sector.includes('clinic') || sector.includes('عياد')) {
+    // ================= قطاع العيادات =================
+    if (itemTitleLabel) itemTitleLabel.innerText = 'اسم الخدمة الطبية / الكشف *';
+    if (itemPriceLabel) itemPriceLabel.innerText = 'سعر الكشف / الإجراء (ج.م) *';
+    if (itemCategoryLabel) itemCategoryLabel.innerText = 'القسم الطبي *';
     if (platform1Label) platform1Label.innerText = '🩺 حساب فيزيتا (Vezeeta)';
     if (platform2Label) platform2Label.innerText = '🏥 حساب كلينيدو / سينا';
-    if (itemTitleLabel) itemTitleLabel.innerText = 'اسم الخدمة الطبية / الكشف *';
-    if (itemPriceLabel) itemPriceLabel.innerText = 'سعر الكشف / الإجراء (ج.م)';
-    if (itemCategoryLabel) itemCategoryLabel.innerText = 'القسم الطبي';
-    
+    if (listTitle) listTitle.innerText = 'إدارة الخدمات الطبية';
+
     if (filterContainer) {
       filterContainer.innerHTML = `
-        <button type="button" class="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold" onclick="filterCategory('all')">الكل</button>
-        <button type="button" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs" onclick="filterCategory('خدمات طبية')">خدمات طبية</button>
-        <button type="button" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs" onclick="filterCategory('كشوفات وعمليات')">كشوفات وعمليات</button>
+        <button type="button" onclick="filterCategory('all', this)" class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-blue-600 text-white transition">الكل</button>
+        <button type="button" onclick="filterCategory('خدمات طبية', this)" class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition">خدمات طبية</button>
+        <button type="button" onclick="filterCategory('كشوفات وعمليات', this)" class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition">كشوفات وعمليات</button>
       `;
     }
   } else if (sector.includes('pro') || sector.includes('قانون') || sector.includes('محام')) {
+    // ================= قطاع المحاماة =================
+    if (itemTitleLabel) itemTitleLabel.innerText = 'اسم الاستشارة / الخدمة القانونية *';
+    if (itemPriceLabel) itemPriceLabel.innerText = 'أتعاب الاستشارة / التوكيل (ج.م) *';
+    if (itemCategoryLabel) itemCategoryLabel.innerText = 'التخصص القانوني *';
     if (platform1Label) platform1Label.innerText = '⚖️ رقم القيد بنقابة المحامين';
     if (platform2Label) platform2Label.innerText = '💼 حساب لينكد إن (LinkedIn)';
-    if (itemTitleLabel) itemTitleLabel.innerText = 'اسم الاستشارة / الخدمة القانونية *';
-    if (itemPriceLabel) itemPriceLabel.innerText = 'أتعاب الاستشارة / التوكيل (ج.م)';
-    if (itemCategoryLabel) itemCategoryLabel.innerText = 'التخصص القانوني';
-    
+    if (listTitle) listTitle.innerText = 'إدارة الاستشارات والخدمات القانونية';
+
     if (filterContainer) {
       filterContainer.innerHTML = `
-        <button type="button" class="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold" onclick="filterCategory('all')">الكل</button>
-        <button type="button" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs" onclick="filterCategory('استشارات')">استشارات قانونية</button>
-        <button type="button" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs" onclick="filterCategory('قضايا')">قضايا وتوكيلات</button>
+        <button type="button" onclick="filterCategory('all', this)" class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-blue-600 text-white transition">الكل</button>
+        <button type="button" onclick="filterCategory('استشارات', this)" class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition">استشارات قانونية</button>
+        <button type="button" onclick="filterCategory('قضايا', this)" class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition">قضايا وتوكيلات</button>
       `;
     }
   } else {
+    // ================= قطاع العقارات (الافتراضي) =================
+    if (itemTitleLabel) itemTitleLabel.innerText = 'عنوان العقار / المشروع *';
+    if (itemPriceLabel) itemPriceLabel.innerText = 'السعر الإجمالي (ج.م) *';
+    if (itemCategoryLabel) itemCategoryLabel.innerText = 'نوع العقار / تشطيبات *';
     if (platform1Label) platform1Label.innerText = '🏢 معرض عقارماب (Aqarmap)';
     if (platform2Label) platform2Label.innerText = '🏠 حساب بروبرتي فايندر';
-    if (itemTitleLabel) itemTitleLabel.innerText = 'عنوان العقار / المشروع *';
-    if (itemPriceLabel) itemPriceLabel.innerText = 'السعر الإجمالي (ج.م)';
-    if (itemCategoryLabel) itemCategoryLabel.innerText = 'نوع العقار / تشطيبات';
+    if (listTitle) listTitle.innerText = 'إدارة المنتجات / الخدمات';
+
+    if (filterContainer) {
+      filterContainer.innerHTML = `
+        <button type="button" onclick="filterCategory('all', this)" class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-blue-600 text-white transition">الكل</button>
+        <button type="button" onclick="filterCategory('عقارات', this)" class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition">العقارات</button>
+        <button type="button" onclick="filterCategory('تشطيبات', this)" class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition">التشطيبات</button>
+      `;
+    }
   }
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-window.filterCategory = function(cat) {
-  if (cat === 'all') {
+// فلترة العناصر داخل الجدول حسب القسم، مع تظليل الزر النشط
+window.filterCategory = function(category, btnElement) {
+  document.querySelectorAll('#filter-group-estate .filter-btn').forEach(b => {
+    b.className = 'filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition';
+  });
+  if (btnElement) {
+    btnElement.className = 'filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-blue-600 text-white transition';
+  }
+
+  if (category === 'all') {
     renderItemsTable(currentItems);
   } else {
-    const filtered = currentItems.filter(i => (i.Item_Category || i.category || '').includes(cat));
+    const filtered = currentItems.filter(item => (item.Item_Category || '').includes(category));
     renderItemsTable(filtered);
   }
 };
 
+// دعم البحث السريع من الهيدر
+window.filterProperties = function(query) {
+  const q = (query || '').trim().toLowerCase();
+  if (!q) {
+    renderItemsTable(currentItems);
+    return;
+  }
+  const filtered = currentItems.filter(item => {
+    const title = (item.Item_Title || '').toLowerCase();
+    const category = (item.Item_Category || '').toLowerCase();
+    const desc = (item.Description || '').toLowerCase();
+    return title.includes(q) || category.includes(q) || desc.includes(q);
+  });
+  renderItemsTable(filtered);
+};
+
+// ==========================================
+// جلب بيانات العميل والعناصر من n8n / Airtable
+// ==========================================
 async function fetchAllClientData() {
   try {
     const res = await fetch(window.CONFIG.WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        action: 'get_client_data', 
-        client_whatsapp: currentClient.whatsapp 
+      body: JSON.stringify({
+        action: 'get_client_data',
+        client_whatsapp: currentClient.whatsapp
       })
     });
 
@@ -224,32 +356,52 @@ async function fetchAllClientData() {
       updateHeaderInfo(client);
       populateDashboardFields(client);
       renderItemsTable(currentItems);
+      updateSubscriptionStats(client);
     }
   } catch (err) {
     console.warn('⚠️ تعذر جلب البيانات:', err);
   }
 }
 
+// ==========================================
+// تحديث بيانات الهيدر والسايدبار (اللوجو + اسم الشركة)
+// ==========================================
 function updateHeaderInfo(client) {
   const companyName = client.Company_Name || currentClient.company_name;
 
-  const headerTitle = document.querySelector('header h1') || document.getElementById('dashboard-header-title');
-  if (headerTitle && companyName && companyName !== 'منصتي') {
-    headerTitle.innerHTML = `لوحة تحكم المنظومة | <span class="text-blue-600 font-bold">${companyName}</span>`;
+  const listTitleHeader = document.querySelector('header h1');
+  if (listTitleHeader && companyName) {
+    listTitleHeader.innerHTML = `لوحة تحكم المنظومة | <span class="text-blue-600 font-bold">${companyName}</span>`;
   }
 
   const sidebarAgencyName = document.getElementById('sidebar-agency-name');
-  if (sidebarAgencyName && companyName && companyName !== 'منصتي') {
+  if (sidebarAgencyName && companyName) {
     sidebarAgencyName.textContent = companyName;
   }
 
-  const logoUrl = client.Logo_URL || (Array.isArray(client.Logo) ? client.Logo[0]?.url : client.Logo);
+  const planName = document.getElementById('sidebar-plan-name');
+  if (planName && client['نوع الباقة']) {
+    planName.textContent = client['نوع الباقة'];
+  }
+
+  const logoUrl = client.Logo_URL;
   if (logoUrl && typeof logoUrl === 'string' && logoUrl.startsWith('http')) {
-    const allLogos = document.querySelectorAll('#sidebar-logo, header img, aside img, .client-logo-preview');
+    const allLogos = document.querySelectorAll('#sidebar-logo, .client-logo-preview');
     allLogos.forEach(img => {
       img.src = logoUrl;
       img.classList.remove('hidden');
     });
+  }
+
+  const faviconUrl = client.Favicon_URL;
+  if (faviconUrl && typeof faviconUrl === 'string' && faviconUrl.startsWith('http')) {
+    let faviconLink = document.querySelector('link[rel="icon"]');
+    if (!faviconLink) {
+      faviconLink = document.createElement('link');
+      faviconLink.rel = 'icon';
+      document.head.appendChild(faviconLink);
+    }
+    faviconLink.href = faviconUrl;
   }
 
   const previewLink = document.getElementById('top-preview-link');
@@ -257,51 +409,93 @@ function updateHeaderInfo(client) {
     previewLink.href = `${window.CONFIG.BASE_URL}/index.html?client=${currentClient.whatsapp}`;
   }
 
+  const defaultDomainBtn = document.getElementById('default-domain-btn');
+  if (defaultDomainBtn) {
+    defaultDomainBtn.href = `${window.CONFIG.BASE_URL}/index.html?client=${currentClient.whatsapp}`;
+  }
+
   calculateSubscriptionDays(client);
 }
 
+// ==========================================
+// حساب حالة الاشتراك (تجريبي / نشط) وعدد الأيام المتبقية
+// ==========================================
 function calculateSubscriptionDays(client) {
-  const createdTime = client['تاريخ الاشتراك'] || client.Created_Time || client.created_at || new Date();
+  const createdTime = client['تاريخ الاشتراك'] || new Date();
   const startDate = new Date(createdTime);
   const now = new Date();
-  const diffDays = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
+  const diffDays = isNaN(startDate.getTime()) ? 0 : Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
   const remainingDays = Math.max(0, 14 - diffDays);
 
-  const subBadge = document.getElementById('subscription-status-badge') || document.querySelector('.subscription-badge');
+  const subBadge = document.getElementById('subscription-status-badge');
   if (subBadge) {
-    if (client['حالة الدفع'] === 'مدفوع' || client.Payment_Status === 'Active') {
+    if (client['حالة الدفع'] === 'مدفوع') {
       subBadge.innerHTML = `<span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold">اشتراك نشط ⭐</span>`;
     } else {
       subBadge.innerHTML = `<span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold">تجريبي: متبقي ${remainingDays} يوم</span>`;
     }
   }
+
+  const planTitleDisplay = document.getElementById('plan-title-display');
+  if (planTitleDisplay) {
+    planTitleDisplay.textContent = client['نوع الباقة'] || 'باقة تجريبية';
+  }
 }
 
+// ==========================================
+// إحصائيات استهلاك الباقة (عدد العناصر المضافة)
+// ==========================================
+function updateSubscriptionStats(client) {
+  const packageLimits = {
+    'تجريبية': 10,
+    'أساسية': 30,
+    'احترافية': 100
+  };
+
+  const packageType = client['نوع الباقة'] || 'تجريبية';
+  const limit = packageLimits[packageType] || 30;
+  const used = currentItems.length;
+  const percent = Math.min(100, Math.round((used / limit) * 100));
+
+  const statsItemsCount = document.getElementById('stats-items-count');
+  if (statsItemsCount) statsItemsCount.textContent = `${used} / ${limit}`;
+
+  const statsItemsBar = document.getElementById('stats-items-bar');
+  if (statsItemsBar) statsItemsBar.style.width = percent + '%';
+
+  const statsItemsLeft = document.getElementById('stats-items-left');
+  if (statsItemsLeft) statsItemsLeft.textContent = `${Math.max(0, limit - used)} عنصر`;
+}
+
+// ==========================================
+// تعبئة نماذج الإعدادات ببيانات Airtable الحقيقية
+// ==========================================
 function populateDashboardFields(client) {
   setVal('setting-agency-name', client.Company_Name);
-  setVal('setting-color', client.Theme_Color || '#2563eb');
+  setVal('setting-color', client.Theme_Color || '#0284c7');
   setVal('hero-title', client.Slogan);
-  
-  const seoDesc = client['\u2060SEO_Description\u2060'] || client['SEO_Description'] || '';
+
+  const seoDescRaw = client['\u2060SEO_Description\u2060'] || client['SEO_Description'] || '';
   setVal('seo-title', client.SEO_Title);
-  setVal('seo-desc', seoDesc);
+  setVal('seo-desc', seoDescRaw);
 
   setVal('social-whatsapp', client.Whatsapp);
   setVal('social-facebook', client.Facebook);
   setVal('social-instagram', client.Instagram);
-  setVal('social-tiktok', client.TikTok);
-  setVal('social-linkedin', client.LinkedIn);
-  
+
   setVal('mkt-meta', client.Meta_Pixel_ID);
 }
 
 function setVal(elementId, value) {
   const el = document.getElementById(elementId);
-  if (el && value !== undefined && value !== null) {
+  if (el && value !== undefined && value !== null && value !== '') {
     el.value = value;
   }
 }
 
+// ==========================================
+// رفع الصور ومعاينتها + تحديد صورة الغلاف
+// ==========================================
 function setupImageUploader() {
   const fileInput = document.getElementById('item-image-input');
   if (!fileInput) return;
@@ -309,7 +503,9 @@ function setupImageUploader() {
   fileInput.addEventListener('change', (e) => {
     const files = Array.from(e.target.files);
     let loadedCount = 0;
-    
+
+    if (files.length === 0) return;
+
     files.forEach(file => {
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -333,8 +529,8 @@ function renderImagesPreview() {
   uploadedImages.forEach((imgObj, index) => {
     const isHero = index === heroImageIndex;
     const div = document.createElement('div');
-    div.className = `relative rounded-xl overflow-hidden border-2 h-24 cursor-pointer ${isHero ? 'border-blue-600 ring-2 ring-blue-300' : 'border-slate-200'} group`;
-    
+    div.className = `relative rounded-xl overflow-hidden border-2 h-24 cursor-pointer ${isHero ? 'border-blue-600 ring-2 ring-blue-300' : 'border-slate-200 dark:border-slate-700'} group`;
+
     div.innerHTML = `
       <img src="${imgObj.url}" class="w-full h-full object-cover">
       ${isHero ? '<span class="absolute bottom-1 right-1 bg-blue-600 text-white text-[9px] px-1 rounded">الغلاف ⭐</span>' : ''}
@@ -342,15 +538,15 @@ function renderImagesPreview() {
         <i data-lucide="x" class="w-3 h-3"></i>
       </button>
     `;
-    
+
     div.addEventListener('click', () => {
       heroImageIndex = index;
       renderImagesPreview();
     });
-    
+
     previewContainer.appendChild(div);
   });
-  
+
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -363,6 +559,9 @@ window.removeImage = function(index, event) {
   renderImagesPreview();
 };
 
+// ==========================================
+// إضافة عنصر جديد (منتج / خدمة)
+// ==========================================
 async function handleAddItem(e) {
   if (e) e.preventDefault();
   const title = document.getElementById('item-title')?.value.trim();
@@ -377,10 +576,10 @@ async function handleAddItem(e) {
     action: 'add_item',
     client_whatsapp: currentClient.whatsapp,
     sector: currentClient.sector,
-    title: title,
-    price: document.getElementById('item-price')?.value || 0,
-    category: document.getElementById('item-category')?.value || 'عام',
-    description: document.getElementById('item-desc')?.value || '',
+    Item_Title: title,
+    Price: document.getElementById('item-price')?.value || 0,
+    Item_Category: document.getElementById('item-category')?.value || 'عام',
+    Description: document.getElementById('item-desc')?.value || '',
     images: imagesArray,
     hero_image_url: uploadedImages[heroImageIndex]?.url || ''
   };
@@ -397,14 +596,19 @@ async function handleAddItem(e) {
       uploadedImages = [];
       heroImageIndex = 0;
       renderImagesPreview();
-      fetchAllClientData();
-      switchTab('tab-items-list');
+      await fetchAllClientData();
+      switchTab('properties-list');
+    } else {
+      alert('❌ حدث خطأ أثناء الحفظ في السيرفر.');
     }
   } catch (err) {
     alert('❌ خطأ أثناء الحفظ');
   }
 }
 
+// ==========================================
+// عرض جدول العناصر (Airtable columns: Item_Title, Price, Item_Category, Description)
+// ==========================================
 function renderItemsTable(itemsToRender) {
   const tableBody = document.getElementById('items-table-body');
   if (!tableBody) return;
@@ -412,23 +616,46 @@ function renderItemsTable(itemsToRender) {
   const items = itemsToRender || currentItems;
 
   if (!items || items.length === 0) {
-    tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400 text-xs">لا توجد عناصر مضافة حتى الآن.</td></tr>`;
+    tableBody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400 text-xs">لا توجد عناصر مضافة حتى الآن.</td></tr>`;
     return;
   }
 
   tableBody.innerHTML = items.map((item, idx) => `
-    <tr class="border-b border-slate-100 text-xs hover:bg-slate-50 transition">
-      <td class="py-3 px-4 font-bold text-slate-800">${item.Item_Title || item.title || '-'}</td>
-      <td class="py-3 px-4 text-blue-600 font-bold">${(item.Price || item.price) ? (item.Price || item.price) + ' ج.م' : 'مجاني / حسب الاتفاق'}</td>
-      <td class="py-3 px-4"><span class="bg-slate-100 px-2 py-0.5 rounded text-slate-600">${item.Item_Category || item.category || 'عام'}</span></td>
-      <td class="py-3 px-4 text-slate-500 max-w-xs truncate">${item.Description || item.description || '-'}</td>
-      <td class="py-3 px-4 text-center">
+    <tr class="border-b border-slate-100 dark:border-slate-800 text-xs hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
+      <td class="p-4 font-bold text-slate-800 dark:text-slate-200">${escapeHtml(item.Item_Title || '-')}</td>
+      <td class="p-4 text-blue-600 dark:text-blue-400 font-bold">${formatPrice(item.Price)}</td>
+      <td class="p-4"><span class="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-600 dark:text-slate-300">${escapeHtml(item.Item_Category || 'عام')}</span></td>
+      <td class="p-4 text-slate-500 dark:text-slate-400 max-w-xs truncate">${escapeHtml(item.Description || '-')}</td>
+      <td class="p-4 text-center">
         <button onclick="deleteItem('${item.id || item.record_id || idx}')" class="text-red-500 hover:text-red-700 font-bold transition">حذف</button>
       </td>
     </tr>
   `).join('');
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+function formatPrice(rawPrice) {
+  if (rawPrice === undefined || rawPrice === null || rawPrice === '') {
+    return 'مجاني / حسب الاتفاق';
+  }
+  const priceStr = String(rawPrice).trim();
+  const numericOnly = priceStr.replace(/[^\d.]/g, '');
+  if (numericOnly === '') return priceStr;
+  const num = Number(numericOnly);
+  if (isNaN(num)) return priceStr;
+  return num.toLocaleString('en-US') + ' ج.م';
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = String(text);
+  return div.innerHTML;
+}
+
+// ==========================================
+// حذف عنصر
+// ==========================================
 window.deleteItem = async function(itemId) {
   if (!confirm('هل أنت متأكد من حذف هذا العنصر نهائياً؟')) return;
 
@@ -444,30 +671,90 @@ window.deleteItem = async function(itemId) {
     });
     if (res.ok) {
       alert('🗑️ تم الحذف بنجاح');
-      fetchAllClientData();
+      await fetchAllClientData();
+    } else {
+      alert('❌ تعذر حذف العنصر');
     }
   } catch (e) {
     alert('❌ تعذر حذف العنصر');
   }
 };
 
+// ==========================================
+// تصدير العناصر إلى CSV
+// ==========================================
 function exportToCSV() {
   if (!currentItems.length) return alert('لا توجد بيانات لتصديرها');
-  const headers = ['العنوان', 'السعر', 'القسم', 'الوصف'];
+  const headers = ['Item_Title', 'Price', 'Item_Category', 'Description'];
   const rows = currentItems.map(i => [
-    `"${i.Item_Title || i.title || ''}"`,
-    i.Price || i.price || 0,
-    `"${i.Item_Category || i.category || ''}"`,
-    `"${i.Description || i.description || ''}"`
+    `"${(i.Item_Title || '').replace(/"/g, '""')}"`,
+    i.Price || 0,
+    `"${(i.Item_Category || '').replace(/"/g, '""')}"`,
+    `"${(i.Description || '').replace(/"/g, '""')}"`
   ]);
   const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `export_${Date.now()}.csv`;
+  link.download = `lucidia_export_${Date.now()}.csv`;
   link.click();
 }
+window.exportToCSV = exportToCSV;
 
+// ==========================================
+// استيراد CSV (زر استيراد في أعلى الجدول)
+// ==========================================
+function setupCsvImporter() {
+  const importInput = document.getElementById('input-import-csv');
+  if (!importInput) return;
+
+  importInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const text = event.target.result;
+      const parsed = XLSX.read(text, { type: 'string' });
+      const sheet = parsed.Sheets[parsed.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+      if (!rows.length) {
+        alert('⚠️ الملف فارغ أو غير صالح');
+        return;
+      }
+
+      if (!confirm(`سيتم استيراد ${rows.length} عنصر. هل تريد المتابعة؟`)) return;
+
+      try {
+        const res = await fetch(window.CONFIG.WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'import_items',
+            client_whatsapp: currentClient.whatsapp,
+            sector: currentClient.sector,
+            items: rows
+          })
+        });
+        if (res.ok) {
+          alert('✅ تم الاستيراد بنجاح');
+          await fetchAllClientData();
+        } else {
+          alert('❌ تعذر استيراد الملف');
+        }
+      } catch (err) {
+        alert('❌ تعذر الاتصال بالسيرفر أثناء الاستيراد');
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+    importInput.value = '';
+  });
+}
+
+// ==========================================
+// دوال مساعدة عامة للتحويل إلى Base64 وإرسال البيانات
+// ==========================================
 function getBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -477,7 +764,7 @@ function getBase64(file) {
   });
 }
 
-async function sendDataToN8n(payload) {
+async function sendDataToN8n(payload, messageEl) {
   try {
     const res = await fetch(window.CONFIG.WEBHOOK_URL, {
       method: 'POST',
@@ -485,18 +772,32 @@ async function sendDataToN8n(payload) {
       body: JSON.stringify(payload)
     });
     if (res.ok) {
-      alert('✅ تم الحفظ بنجاح!');
-      fetchAllClientData();
+      showFormMessage(messageEl, '✅ تم الحفظ بنجاح!', true);
+      await fetchAllClientData();
     } else {
-      alert('❌ حدث خطأ أثناء الحفظ في السيرفر.');
+      showFormMessage(messageEl, '❌ حدث خطأ أثناء الحفظ في السيرفر.', false);
     }
   } catch (err) {
-    alert('❌ تعذر الاتصال بالسيرفر.');
+    showFormMessage(messageEl, '❌ تعذر الاتصال بالسيرفر.', false);
   }
 }
 
+function showFormMessage(elementId, text, success) {
+  if (!elementId) return;
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  el.textContent = text;
+  el.classList.remove('hidden', 'text-emerald-600', 'text-red-600');
+  el.classList.add(success ? 'text-emerald-600' : 'text-red-600');
+  setTimeout(() => el.classList.add('hidden'), 4000);
+}
+
+// ==========================================
+// حفظ إعدادات الهوية العامة (Company_Name, Theme_Color, Logo_URL)
+// ==========================================
 async function handleSettingsSubmit(e) {
   e.preventDefault();
+
   let logoBase64 = '';
   const logoInput = document.getElementById('setting-logo');
   if (logoInput && logoInput.files.length > 0) {
@@ -512,89 +813,114 @@ async function handleSettingsSubmit(e) {
   const payload = {
     action: 'update_settings',
     client_whatsapp: currentClient.whatsapp,
-    company_name: document.getElementById('setting-agency-name')?.value,
-    primary_color: document.getElementById('setting-color')?.value,
+    Company_Name: document.getElementById('setting-agency-name')?.value,
+    Theme_Color: document.getElementById('setting-color')?.value,
     accent_color: document.getElementById('setting-accent-color')?.value,
-    logo_url: logoBase64,
-    favicon_url: faviconBase64
+    Logo_URL: logoBase64,
+    Favicon_URL: faviconBase64
   };
-  await sendDataToN8n(payload);
+  await sendDataToN8n(payload, 'settings-msg');
 }
 
+// ==========================================
+// حفظ أرقام التواصل والروابط (Whatsapp, Facebook, Instagram, TikTok, LinkedIn)
+// ==========================================
 async function handleSocialSubmit(e) {
   e.preventDefault();
   const payload = {
     action: 'update_social',
     client_whatsapp: currentClient.whatsapp,
-    whatsapp: document.getElementById('social-whatsapp')?.value,
+    Whatsapp: document.getElementById('social-whatsapp')?.value,
     phone: document.getElementById('social-phone')?.value,
     maps: document.getElementById('social-maps')?.value,
-    facebook: document.getElementById('social-facebook')?.value,
-    instagram: document.getElementById('social-instagram')?.value,
-    tiktok: document.getElementById('social-tiktok')?.value,
-    linkedin: document.getElementById('social-linkedin')?.value,
+    Facebook: document.getElementById('social-facebook')?.value,
+    Instagram: document.getElementById('social-instagram')?.value
   };
-  await sendDataToN8n(payload);
+  await sendDataToN8n(payload, 'social-msg');
 }
 
+// ==========================================
+// حفظ إعدادات SEO (SEO_Title, SEO_Description)
+// ==========================================
 async function handleSeoSubmit(e) {
   e.preventDefault();
   const payload = {
     action: 'update_seo',
     client_whatsapp: currentClient.whatsapp,
-    seo_title: document.getElementById('seo-title')?.value,
-    seo_desc: document.getElementById('seo-desc')?.value,
+    SEO_Title: document.getElementById('seo-title')?.value,
+    SEO_Description: document.getElementById('seo-desc')?.value
   };
-  await sendDataToN8n(payload);
+  await sendDataToN8n(payload, 'seo-msg');
 }
 
+// ==========================================
+// حفظ أدوات التتبع التسويقي (Meta_Pixel_ID + منصات أخرى)
+// ==========================================
 async function handleMarketingSubmit(e) {
   e.preventDefault();
   const payload = {
     action: 'update_marketing',
     client_whatsapp: currentClient.whatsapp,
-    meta_pixel: document.getElementById('mkt-meta')?.value,
+    Meta_Pixel_ID: document.getElementById('mkt-meta')?.value,
     tiktok_pixel: document.getElementById('mkt-tiktok')?.value,
     snapchat_pixel: document.getElementById('mkt-snapchat')?.value,
-    ga4_id: document.getElementById('mkt-ga4')?.value,
+    ga4_id: document.getElementById('mkt-ga4')?.value
   };
-  await sendDataToN8n(payload);
+  await sendDataToN8n(payload, 'marketing-msg');
 }
 
+// ==========================================
+// حفظ الدومين المخصص
+// ==========================================
 async function handleDomainSubmit(e) {
   e.preventDefault();
   const payload = {
     action: 'update_domain',
     client_whatsapp: currentClient.whatsapp,
-    custom_domain: document.getElementById('custom-domain-input')?.value,
+    custom_domain: document.getElementById('custom-domain-input')?.value
   };
-  await sendDataToN8n(payload);
+  await sendDataToN8n(payload, 'domain-msg');
 }
 
+// ==========================================
+// حفظ محتوى الصفحة الرئيسية (Slogan / hero content)
+// ==========================================
 async function handleContentSubmit(e) {
   e.preventDefault();
   const payload = {
     action: 'update_content',
     client_whatsapp: currentClient.whatsapp,
-    hero_title: document.getElementById('hero-title')?.value,
+    Slogan: document.getElementById('hero-title')?.value,
     hero_subtitle: document.getElementById('hero-subtitle')?.value,
     about_exp: document.getElementById('about-exp')?.value,
-    about_satisfaction: document.getElementById('about-satisfaction')?.value,
+    about_satisfaction: document.getElementById('about-satisfaction')?.value
   };
-  await sendDataToN8n(payload);
+  await sendDataToN8n(payload, 'content-msg');
 }
 
+// ==========================================
+// ربط كل الفورمات بمعالجاتها الصحيحة (تطابق الـ IDs الحقيقية في الـ HTML)
+// ==========================================
 function setupEventListeners() {
-  const formItem = document.getElementById('form-add-item');
-  if (formItem) formItem.addEventListener('submit', handleAddItem);
+  document.getElementById('form-add-item')?.addEventListener('submit', handleAddItem);
+  document.getElementById('settings-form')?.addEventListener('submit', handleSettingsSubmit);
+  document.getElementById('social-form')?.addEventListener('submit', handleSocialSubmit);
+  document.getElementById('seo-form')?.addEventListener('submit', handleSeoSubmit);
+  document.getElementById('marketing-form')?.addEventListener('submit', handleMarketingSubmit);
+  document.getElementById('domain-form')?.addEventListener('submit', handleDomainSubmit);
+  document.getElementById('content-form')?.addEventListener('submit', handleContentSubmit);
 
-  const btnExport = document.getElementById('btn-export-csv');
-  if (btnExport) btnExport.addEventListener('click', exportToCSV);
+  setupCsvImporter();
 
-  document.getElementById('form-settings')?.addEventListener('submit', handleSettingsSubmit);
-  document.getElementById('form-social')?.addEventListener('submit', handleSocialSubmit);
-  document.getElementById('form-seo')?.addEventListener('submit', handleSeoSubmit);
-  document.getElementById('form-marketing')?.addEventListener('submit', handleMarketingSubmit);
-  document.getElementById('form-domain')?.addEventListener('submit', handleDomainSubmit);
-  document.getElementById('form-content')?.addEventListener('submit', handleContentSubmit);
+  document.addEventListener('click', (e) => {
+    const helpMenu = document.getElementById('help-menu');
+    const helpBtn = e.target.closest('button');
+    if (helpMenu && !helpMenu.classList.contains('hidden')) {
+      const clickedInsideMenu = e.target.closest('#help-menu');
+      const clickedHelpToggle = helpBtn && helpBtn.getAttribute('onclick') === 'toggleHelpMenu()';
+      if (!clickedInsideMenu && !clickedHelpToggle) {
+        helpMenu.classList.add('hidden');
+      }
+    }
+  });
 }
