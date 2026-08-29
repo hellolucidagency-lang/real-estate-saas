@@ -1,5 +1,5 @@
 // ==========================================
-// LUCIDIA SAAS - UNIFIED ADMIN DASHBOARD ENGINE (V3.4 - INSTAPAY UPDATED)
+// LUCIDIA SAAS - UNIFIED ADMIN DASHBOARD ENGINE (V3.5 - BULLETPROOF DATA FETCH)
 // ==========================================
 
 window.CONFIG = window.CONFIG || {
@@ -97,7 +97,7 @@ function customizeSectorUI() {
 }
 
 // ==========================================
-// جلب كافة بيانات العميل والمنتجات (Fetch & Populate)
+// جلب كافة بيانات العميل والمنتجات (الجزء المعدل السحري)
 // ==========================================
 async function fetchAllClientData() {
   try {
@@ -111,17 +111,32 @@ async function fetchAllClientData() {
     });
 
     if (res.ok) {
-      const data = await res.json().catch(() => ({}));
-      const client = data.client || {};
-      currentItems = data.items || [];
+      let rawData = await res.json().catch(() => ({}));
+      
+      // 1. فك التغليف لو الداتا جاية في Array من n8n
+      if (Array.isArray(rawData)) {
+        rawData = rawData[0] || {};
+      }
 
-      // 1. تحديث الهيدر وعنوان اللوحة
+      // 2. فك تغليف Airtable للعميل (fields)
+      let client = rawData.client || {};
+      if (client.fields) {
+        client = { ...client, ...client.fields };
+      }
+
+      // 3. فك تغليف Airtable للمنتجات (fields)
+      let rawItems = rawData.items || [];
+      currentItems = rawItems.map(item => {
+        return item.fields ? { ...item, ...item.fields, id: item.id } : item;
+      });
+
+      // 4. تحديث الهيدر وعنوان اللوحة
       updateHeaderInfo(client);
 
-      // 2. تعبئة الحقول في كافة التابات
+      // 5. تعبئة الحقول في كافة التابات
       populateDashboardFields(client);
 
-      // 3. رسم جدول المنتجات
+      // 6. رسم جدول المنتجات
       renderItemsTable();
     }
   } catch (err) {
@@ -136,6 +151,25 @@ function updateHeaderInfo(client) {
   const headerTitle = document.querySelector('header h1') || document.getElementById('dashboard-header-title');
   if (headerTitle) {
     headerTitle.innerHTML = `لوحة تحكم المنظومة | <span class="text-blue-600 font-bold">${companyName}</span> (${clientName})`;
+  }
+
+  // تحديث الاسم في القائمة الجانبية
+  const sidebarAgencyName = document.getElementById('sidebar-agency-name');
+  if (sidebarAgencyName && companyName) {
+    sidebarAgencyName.textContent = companyName;
+  }
+
+  // تحديث اللوجو في القائمة الجانبية (لو موجود في Airtable)
+  const logoUrl = client.Logo_URL || (Array.isArray(client.Logo) ? client.Logo[0]?.url : client.Logo);
+  const sidebarLogo = document.getElementById('sidebar-logo');
+  if (sidebarLogo && logoUrl && typeof logoUrl === 'string') {
+    sidebarLogo.src = logoUrl;
+  }
+
+  // زر زيارة الموقع
+  const previewLink = document.getElementById('top-preview-link');
+  if (previewLink) {
+    previewLink.href = `${window.CONFIG.BASE_URL}/index.html?client=${currentClient.whatsapp}`;
   }
 
   // حساب الأيام المتبقية للتجربة (14 يوم)
@@ -238,7 +272,7 @@ function renderImagesPreview() {
     div.innerHTML = `
       <img src="${imgObj.url}" class="w-full h-full object-cover">
       ${isHero ? '<span class="absolute bottom-1 right-1 bg-blue-600 text-white text-[9px] px-1 rounded">الغلاف ⭐</span>' : ''}
-      <button class="absolute top-1 left-1 bg-red-500/80 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition" onclick="removeImage(${index}, event)">
+      <button type="button" class="absolute top-1 left-1 bg-red-500/80 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition" onclick="removeImage(${index}, event)">
         <i data-lucide="x" class="w-3 h-3"></i>
       </button>
     `;
@@ -375,10 +409,8 @@ window.payViaInstapay = function(planType) {
   const amount = planType === 'yearly' ? '3,500 ج.م (شامل دومين مجاني)' : '350 ج.م شهرياً';
   const msg = `مرحباً، أود تجديد اشتراك منصة Lucidia (${planType === 'yearly' ? 'السنوي' : 'الشهري'}) للنشاط: ${currentClient.company_name} - رقم: ${currentClient.whatsapp}`;
   
-  // فتح رابط الدفع المباشر في انستاباي
   window.open(window.CONFIG.INSTAPAY_LINK, '_blank');
 
-  // تنبيه المستخدم لإرسال الإشعار بعد التحويل
   setTimeout(() => {
     const confirmSendReceipt = confirm(
       `تم فتح رابط الدفع لتطبيق InstaPay.\n\nالمعرف: ${window.CONFIG.INSTAPAY_IPA}\nالقيمة: ${amount}\n\nبعد إتمام التحويل، اضغط موافق لإرسال صورة الإيصال وتفعيل حسابك فوراً.`
@@ -513,7 +545,6 @@ function setupEventListeners() {
   const btnExport = document.getElementById('btn-export-csv');
   if (btnExport) btnExport.addEventListener('click', exportToCSV);
 
-  // ربط نماذج الحفظ المختلفة
   document.getElementById('form-settings')?.addEventListener('submit', handleSettingsSubmit);
   document.getElementById('form-social')?.addEventListener('submit', handleSocialSubmit);
   document.getElementById('form-seo')?.addEventListener('submit', handleSeoSubmit);
