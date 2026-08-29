@@ -1,5 +1,5 @@
 // ==========================================
-// LUCIDIA SAAS - UNIFIED ADMIN DASHBOARD ENGINE (V4.5 - BULLETPROOF & AUTO-SECTOR)
+// LUCIDIA SAAS - UNIFIED ADMIN DASHBOARD ENGINE (V5.0 - FULL INTERACTIVITY)
 // ==========================================
 
 window.CONFIG = window.CONFIG || {
@@ -23,6 +23,7 @@ async function initDashboard() {
   console.log('🚀 Lucidia Dashboard Initialized...');
   loadClientData();
   customizeSectorUI();
+  setupNavigationTabs();
   setupImageUploader();
   setupEventListeners();
 
@@ -72,8 +73,67 @@ function loadClientData() {
 }
 
 // ==========================================
-// تخصيص واجهة المستخدم وأزرار الفلترة ديناميكياً
+// تفعيل الضغط والتنقل بين التبويبات والأقسام
 // ==========================================
+function setupNavigationTabs() {
+  const navButtons = document.querySelectorAll('[data-tab], aside button, aside a');
+  
+  navButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const targetTabId = btn.getAttribute('data-tab') || getTabIdFromText(btn.innerText);
+      if (targetTabId) {
+        e.preventDefault();
+        switchTab(targetTabId);
+      }
+    });
+  });
+
+  const addBtns = document.querySelectorAll('#btn-add-new-item, [onclick*="form-add-item"], [data-action="add-item"]');
+  addBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      switchTab('tab-add-item');
+    });
+  });
+}
+
+function getTabIdFromText(text) {
+  if (!text) return null;
+  const t = text.trim();
+  if (t.includes('جميع العناصر') || t.includes('المنتجات') || t.includes('الخدمات')) return 'tab-items-list';
+  if (t.includes('إضافة عنصر') || t.includes('إضافة جديد')) return 'tab-add-item';
+  if (t.includes('الهوية') || t.includes('البيانات العامة')) return 'tab-settings';
+  if (t.includes('رابط الموقع') || t.includes('الدومين')) return 'tab-domain';
+  if (t.includes('محتوى الصفحة') || t.includes('النبذة')) return 'tab-content';
+  if (t.includes('محركات البحث') || t.includes('SEO')) return 'tab-seo';
+  if (t.includes('وسائل التواصل') || t.includes('الموقع')) return 'tab-social';
+  if (t.includes('التسويق') || t.includes('الاشتراكات')) return 'tab-marketing';
+  return null;
+}
+
+window.switchTab = function(tabId) {
+  const allTabs = document.querySelectorAll('.tab-content, [id^="tab-"], [id^="section-"]');
+  allTabs.forEach(tab => {
+    tab.classList.add('hidden');
+  });
+
+  let targetTab = document.getElementById(tabId);
+  if (!targetTab) {
+    if (tabId === 'tab-items-list') targetTab = document.getElementById('section-items') || document.getElementById('items-view');
+    if (tabId === 'tab-add-item') targetTab = document.getElementById('section-add-item') || document.getElementById('form-add-item')?.parentElement;
+    if (tabId === 'tab-settings') targetTab = document.getElementById('section-settings') || document.getElementById('form-settings')?.parentElement;
+  }
+
+  if (targetTab) {
+    targetTab.classList.remove('hidden');
+  }
+
+  const allNavBtns = document.querySelectorAll('[data-tab], aside button, aside a');
+  allNavBtns.forEach(btn => {
+    btn.classList.remove('bg-blue-600', 'text-white', 'font-bold');
+  });
+};
+
 function customizeSectorUI() {
   const sector = (currentClient?.sector || '').toLowerCase();
   
@@ -83,17 +143,10 @@ function customizeSectorUI() {
   const itemPriceLabel = document.getElementById('label-item-price');
   const itemCategoryLabel = document.getElementById('label-item-category');
 
-  // البحث عن أزرار الفلترة في الواجهة لتغيير مسمياتها
-  const filterButtons = document.querySelectorAll('.bg-blue-500, .bg-blue-600, .border-slate-200, button');
-  let filterContainer = null;
-  filterButtons.forEach(btn => {
-    if (btn.innerText.includes('العقارات') || btn.innerText.includes('التشطيبات') || btn.innerText.includes('الكل')) {
-      filterContainer = btn.parentElement;
-    }
-  });
+  const filterButtons = document.querySelectorAll('.filter-container, .tabs-filter, [id*="filter"]');
+  let filterContainer = filterButtons.length > 0 ? filterButtons[0] : null;
 
   if (sector.includes('clinic') || sector.includes('عياد')) {
-    // 🩺 عيادات
     if (platform1Label) platform1Label.innerText = '🩺 حساب فيزيتا (Vezeeta)';
     if (platform2Label) platform2Label.innerText = '🏥 حساب كلينيدو / سينا';
     if (itemTitleLabel) itemTitleLabel.innerText = 'اسم الخدمة الطبية / الكشف *';
@@ -102,13 +155,12 @@ function customizeSectorUI() {
     
     if (filterContainer) {
       filterContainer.innerHTML = `
-        <button type="button" class="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold shadow-sm">الكل</button>
-        <button type="button" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50">خدمات طبية</button>
-        <button type="button" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50">كشوفات وعمليات</button>
+        <button type="button" class="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold" onclick="filterCategory('all')">الكل</button>
+        <button type="button" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs" onclick="filterCategory('خدمات طبية')">خدمات طبية</button>
+        <button type="button" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs" onclick="filterCategory('كشوفات وعمليات')">كشوفات وعمليات</button>
       `;
     }
   } else if (sector.includes('pro') || sector.includes('قانون') || sector.includes('محام')) {
-    // ⚖️ محاماة
     if (platform1Label) platform1Label.innerText = '⚖️ رقم القيد بنقابة المحامين';
     if (platform2Label) platform2Label.innerText = '💼 حساب لينكد إن (LinkedIn)';
     if (itemTitleLabel) itemTitleLabel.innerText = 'اسم الاستشارة / الخدمة القانونية *';
@@ -117,13 +169,12 @@ function customizeSectorUI() {
     
     if (filterContainer) {
       filterContainer.innerHTML = `
-        <button type="button" class="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold shadow-sm">الكل</button>
-        <button type="button" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50">استشارات قانونية</button>
-        <button type="button" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50">قضايا وتوكيلات</button>
+        <button type="button" class="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold" onclick="filterCategory('all')">الكل</button>
+        <button type="button" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs" onclick="filterCategory('استشارات')">استشارات قانونية</button>
+        <button type="button" class="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs" onclick="filterCategory('قضايا')">قضايا وتوكيلات</button>
       `;
     }
   } else {
-    // 🏢 عقارات
     if (platform1Label) platform1Label.innerText = '🏢 معرض عقارماب (Aqarmap)';
     if (platform2Label) platform2Label.innerText = '🏠 حساب بروبرتي فايندر';
     if (itemTitleLabel) itemTitleLabel.innerText = 'عنوان العقار / المشروع *';
@@ -132,9 +183,15 @@ function customizeSectorUI() {
   }
 }
 
-// ==========================================
-// جلب وعرض البيانات من Airtable
-// ==========================================
+window.filterCategory = function(cat) {
+  if (cat === 'all') {
+    renderItemsTable(currentItems);
+  } else {
+    const filtered = currentItems.filter(i => (i.Item_Category || i.category || '').includes(cat));
+    renderItemsTable(filtered);
+  }
+};
+
 async function fetchAllClientData() {
   try {
     const res = await fetch(window.CONFIG.WEBHOOK_URL, {
@@ -148,15 +205,10 @@ async function fetchAllClientData() {
 
     if (res.ok) {
       let rawData = await res.json().catch(() => ({}));
-      
-      if (Array.isArray(rawData)) {
-        rawData = rawData[0] || {};
-      }
+      if (Array.isArray(rawData)) rawData = rawData[0] || {};
 
       let client = rawData.client || {};
-      if (client.fields) {
-        client = { ...client, ...client.fields };
-      }
+      if (client.fields) client = { ...client, ...client.fields };
 
       if (client.Sector) {
         currentClient.sector = client.Sector;
@@ -171,10 +223,10 @@ async function fetchAllClientData() {
 
       updateHeaderInfo(client);
       populateDashboardFields(client);
-      renderItemsTable();
+      renderItemsTable(currentItems);
     }
   } catch (err) {
-    console.warn('⚠️ تعذر جلب البيانات التلقائية:', err);
+    console.warn('⚠️ تعذر جلب البيانات:', err);
   }
 }
 
@@ -191,7 +243,6 @@ function updateHeaderInfo(client) {
     sidebarAgencyName.textContent = companyName;
   }
 
-  // عرض اللوجو بدقة وفوراً
   const logoUrl = client.Logo_URL || (Array.isArray(client.Logo) ? client.Logo[0]?.url : client.Logo);
   if (logoUrl && typeof logoUrl === 'string' && logoUrl.startsWith('http')) {
     const allLogos = document.querySelectorAll('#sidebar-logo, header img, aside img, .client-logo-preview');
@@ -251,9 +302,6 @@ function setVal(elementId, value) {
   }
 }
 
-// ==========================================
-// إدارة الصور
-// ==========================================
 function setupImageUploader() {
   const fileInput = document.getElementById('item-image-input');
   if (!fileInput) return;
@@ -315,9 +363,6 @@ window.removeImage = function(index, event) {
   renderImagesPreview();
 };
 
-// ==========================================
-// إضافة وعرض وحذف الخدمات / المنتجات
-// ==========================================
 async function handleAddItem(e) {
   if (e) e.preventDefault();
   const title = document.getElementById('item-title')?.value.trim();
@@ -353,22 +398,25 @@ async function handleAddItem(e) {
       heroImageIndex = 0;
       renderImagesPreview();
       fetchAllClientData();
+      switchTab('tab-items-list');
     }
   } catch (err) {
     alert('❌ خطأ أثناء الحفظ');
   }
 }
 
-function renderItemsTable() {
+function renderItemsTable(itemsToRender) {
   const tableBody = document.getElementById('items-table-body');
   if (!tableBody) return;
 
-  if (!currentItems || currentItems.length === 0) {
+  const items = itemsToRender || currentItems;
+
+  if (!items || items.length === 0) {
     tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400 text-xs">لا توجد عناصر مضافة حتى الآن.</td></tr>`;
     return;
   }
 
-  tableBody.innerHTML = currentItems.map((item, idx) => `
+  tableBody.innerHTML = items.map((item, idx) => `
     <tr class="border-b border-slate-100 text-xs hover:bg-slate-50 transition">
       <td class="py-3 px-4 font-bold text-slate-800">${item.Item_Title || item.title || '-'}</td>
       <td class="py-3 px-4 text-blue-600 font-bold">${(item.Price || item.price) ? (item.Price || item.price) + ' ج.م' : 'مجاني / حسب الاتفاق'}</td>
@@ -420,9 +468,6 @@ function exportToCSV() {
   link.click();
 }
 
-// ==========================================
-// إرسال الإعدادات والهوية لـ n8n
-// ==========================================
 function getBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
