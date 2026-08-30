@@ -1,6 +1,6 @@
 // ==========================================
 // LUCIDIA SAAS - UNIFIED ADMIN DASHBOARD ENGINE
-// (V7.0 - FULL PERSISTENCE / AUTO-POPULATE / PER-CLIENT ISOLATION / DUAL-KEY PAYLOADS)
+// (V8.0 - REAL MULTIPART BINARY FILE UPLOADS + FULL PERSISTENCE / PER-CLIENT ISOLATION)
 // ==========================================
 
 window.CONFIG = window.CONFIG || {
@@ -636,51 +636,49 @@ async function handleAddItem(e) {
   const category = document.getElementById('item-category')?.value || 'عام';
   const description = document.getElementById('item-desc')?.value || '';
 
-  const imagesArray = uploadedImages.map(img => ({
-    name: img.file.name,
-    data: img.url
-  }));
-  const heroImageBase64 = uploadedImages[heroImageIndex]?.url || '';
+  const formData = new FormData();
+  formData.append('action', 'add_item');
+  formData.append('client_whatsapp', currentClient.whatsapp);
+  formData.append('sector', currentClient.sector || '');
 
-  const payload = {
-    action: 'add_item',
-    client_whatsapp: currentClient.whatsapp,
-    sector: currentClient.sector,
-    // أسماء أعمدة Airtable الحقيقية (PascalCase)
-    Item_Title: title,
-    Price: price,
-    Item_Category: category,
-    Description: description,
-    Attachments: imagesArray,
-    // نسخة مطابقة بصيغة snake_case لضمان توافق أي workflow في n8n يستخدم مسميات مختلفة
-    title: title,
-    price: price,
-    category: category,
-    description: description,
-    images: imagesArray,
-    hero_image_url: heroImageBase64,
-    hero_image_base64: heroImageBase64
-  };
+  // أسماء أعمدة Airtable الحقيقية (PascalCase)
+  formData.append('Item_Title', title);
+  formData.append('Price', price);
+  formData.append('Item_Category', category);
+  formData.append('Description', description);
+  // نسخة مطابقة بصيغة snake_case لضمان توافق أي workflow في n8n يستخدم مسميات مختلفة
+  formData.append('title', title);
+  formData.append('price', price);
+  formData.append('category', category);
+  formData.append('description', description);
 
-  try {
-    const res = await fetch(window.CONFIG.WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    if (res.ok) {
-      alert('✅ تم الحفظ بنجاح');
-      document.getElementById('form-add-item')?.reset();
-      uploadedImages = [];
-      heroImageIndex = 0;
-      renderImagesPreview();
-      await fetchAllClientData();
-      switchTab('properties-list');
-    } else {
-      alert('❌ حدث خطأ أثناء الحفظ في السيرفر.');
-    }
-  } catch (err) {
-    alert('❌ خطأ أثناء الحفظ');
+  // الصور الحقيقية كـ binary - كل صورة بحقل منفصل (image_0, image_1, ...)
+  // ده اللي بيحل خطأ "expects input data to contain a binary file, but none was found"
+  // اللي كان بيحصل لما كنا بنبعت الصور كنص Base64 جوه JSON بس
+  uploadedImages.forEach((img, index) => {
+    formData.append(`image_${index}`, img.file, img.file.name);
+  });
+  // صورة الغلاف المختارة كحقل binary منفصل يسهل على السيرفر تمييزه
+  const heroImage = uploadedImages[heroImageIndex];
+  if (heroImage) {
+    formData.append('hero_image', heroImage.file, heroImage.file.name);
+  }
+
+  // نسخة Base64 احتياطية كنص لكل الصور، لو الـ workflow بيقرأ Base64 بدل الـ binary
+  const imagesBase64Array = uploadedImages.map(img => ({ name: img.file.name, data: img.url }));
+  formData.append('images_base64', JSON.stringify(imagesBase64Array));
+  formData.append('hero_image_base64', heroImage ? heroImage.url : '');
+
+  const success = await sendFormDataToN8n(formData, null);
+  if (success) {
+    alert('✅ تم الحفظ بنجاح');
+    document.getElementById('form-add-item')?.reset();
+    uploadedImages = [];
+    heroImageIndex = 0;
+    renderImagesPreview();
+    switchTab('properties-list');
+  } else {
+    alert('❌ حدث خطأ أثناء الحفظ في السيرفر.');
   }
 }
 
@@ -877,8 +875,15 @@ function setupCsvImporter() {
 // ==========================================
 // دوال مساعدة عامة للتحويل إلى Base64 وإرسال البيانات
 // ==========================================
+
+// بترجع نص Base64 كامل بصيغة Data URL (data:image/png;base64,....)
+// - ده مفيد لعرض الصورة فورًا في <img src="..."> كمعاينة قبل الرفع
 function getBase64(file) {
   return new Promise((resolve, reject) => {
+    if (!file) {
+      reject(new Error('لا يوجد ملف'));
+      return;
+    }
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => resolve(reader.result);
@@ -886,10 +891,21 @@ function getBase64(file) {
   });
 }
 
+// بتشيل جزء "data:image/png;base64," وترجع نص Base64 الخام فقط
+// - بعض الـ workflows في n8n بتستنى base64 نضيف من غير الـ prefix
+function stripBase64Prefix(dataUrl) {
+  if (!dataUrl || typeof dataUrl !== 'string') return '';
+  const commaIndex = dataUrl.indexOf(',');
+  return commaIndex !== -1 ? dataUrl.substring(commaIndex + 1) : dataUrl;
+}
+
+// ==========================================
+// إرسال JSON عادي (للفورمات اللي مفيهاش ملفات: SEO / سوشيال / دومين / محتوى)
+// ==========================================
 async function sendDataToN8n(payload, messageEl) {
   if (!currentClient || !currentClient.whatsapp) {
     showFormMessage(messageEl, '❌ تعذر تحديد رقم العميل، برجاء إعادة تحميل الصفحة', false);
-    return;
+    return false;
   }
   payload.client_whatsapp = currentClient.whatsapp;
 
@@ -899,15 +915,66 @@ async function sendDataToN8n(payload, messageEl) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    if (res.ok) {
-      showFormMessage(messageEl, '✅ تم الحفظ بنجاح!', true);
-      await fetchAllClientData();
-    } else {
-      showFormMessage(messageEl, '❌ حدث خطأ أثناء الحفظ في السيرفر.', false);
-    }
+
+    return await handleN8nResponse(res, messageEl);
   } catch (err) {
+    console.error('❌ خطأ في الاتصال بالسيرفر:', err);
     showFormMessage(messageEl, '❌ تعذر الاتصال بالسيرفر.', false);
+    return false;
   }
+}
+
+// ==========================================
+// إرسال Multipart/FormData (لأي فورم فيه صورة/ملف فعلي - اللوجو، الفافيكون، صور المنتجات)
+// السبب: عقدة رفع الملفات في n8n بترفض نص JSON/Base64 وبتستنى "binary file" حقيقي جوه الطلب،
+// فلازم نبعت الملفات كـ multipart/form-data بدل ما نلفهم جوه JSON.
+// مهم: متحطش Content-Type يدوي هنا؛ المتصفح بيولّده لوحده مع الـ boundary الصحيح.
+// ==========================================
+async function sendFormDataToN8n(formData, messageEl) {
+  if (!currentClient || !currentClient.whatsapp) {
+    showFormMessage(messageEl, '❌ تعذر تحديد رقم العميل، برجاء إعادة تحميل الصفحة', false);
+    return false;
+  }
+  formData.set('client_whatsapp', currentClient.whatsapp);
+
+  try {
+    const res = await fetch(window.CONFIG.WEBHOOK_URL, {
+      method: 'POST',
+      body: formData
+    });
+
+    return await handleN8nResponse(res, messageEl);
+  } catch (err) {
+    console.error('❌ خطأ في رفع الملف:', err);
+    showFormMessage(messageEl, '❌ تعذر الاتصال بالسيرفر أثناء رفع الملف.', false);
+    return false;
+  }
+}
+
+// ==========================================
+// معالجة موحّدة لرد السيرفر: بنتأكد إن الرد فعلاً { success: true } قبل ما نعتبر
+// العملية نجحت، وبعدين فورًا بنعمل Re-hydration كامل للوحة عبر fetchAllClientData()
+// ==========================================
+async function handleN8nResponse(res, messageEl) {
+  let data = {};
+  try {
+    data = await res.json();
+  } catch (parseErr) {
+    data = {};
+  }
+
+  const succeeded = res.ok && (data.success === true || data.success === undefined);
+
+  if (succeeded) {
+    showFormMessage(messageEl, '✅ تم الحفظ بنجاح!', true);
+    await fetchAllClientData();
+    return true;
+  }
+
+  console.warn('⚠️ رد غير ناجح من السيرفر:', data);
+  const errorText = data.error || data.message || '❌ حدث خطأ أثناء الحفظ في السيرفر.';
+  showFormMessage(messageEl, errorText, false);
+  return false;
 }
 
 function showFormMessage(elementId, text, success) {
@@ -921,52 +988,59 @@ function showFormMessage(elementId, text, success) {
 }
 
 // ==========================================
-// حفظ إعدادات الهوية العامة (Company_Name, Theme_Color, Logo_URL)
+// حفظ إعدادات الهوية العامة (Company_Name, Theme_Color, Logo_URL, Favicon_URL)
 // ==========================================
 async function handleSettingsSubmit(e) {
   e.preventDefault();
-
-  let logoBase64 = '';
-  const logoInput = document.getElementById('setting-logo');
-  if (logoInput && logoInput.files.length > 0) {
-    logoBase64 = await getBase64(logoInput.files[0]);
-  }
-
-  let faviconBase64 = '';
-  const faviconInput = document.getElementById('setting-favicon');
-  if (faviconInput && faviconInput.files.length > 0) {
-    faviconBase64 = await getBase64(faviconInput.files[0]);
-  }
 
   const companyName = document.getElementById('setting-agency-name')?.value || '';
   const themeColor = document.getElementById('setting-color')?.value || '';
   const accentColor = document.getElementById('setting-accent-color')?.value || '';
 
-  const payload = {
-    action: 'update_settings',
-    client_whatsapp: currentClient.whatsapp,
-    // Airtable field names
-    Company_Name: companyName,
-    Theme_Color: themeColor,
-    Accent_Color: accentColor,
-    // snake_case fallback
-    company_name: companyName,
-    primary_color: themeColor,
-    accent_color: accentColor
-  };
+  const logoInput = document.getElementById('setting-logo');
+  const faviconInput = document.getElementById('setting-favicon');
+  const logoFile = logoInput && logoInput.files.length > 0 ? logoInput.files[0] : null;
+  const faviconFile = faviconInput && faviconInput.files.length > 0 ? faviconInput.files[0] : null;
 
-  // لا نبعت مفتاح الصورة أصلاً إلا لو العميل رفع صورة جديدة فعلياً
-  // عشان السيرفر ميمسحش اللوجو/الفافيكون المحفوظين له لو سايب الحقل فاضي
-  if (logoBase64) {
-    payload.Logo_URL = logoBase64;
-    payload.logo_base64 = logoBase64;
-  }
-  if (faviconBase64) {
-    payload.Favicon_URL = faviconBase64;
-    payload.favicon_base64 = faviconBase64;
+  const formData = new FormData();
+  formData.append('action', 'update_settings');
+  formData.append('client_whatsapp', currentClient.whatsapp);
+
+  // الحقول النصية بصيغتي Airtable و snake_case مع بعض
+  formData.append('Company_Name', companyName);
+  formData.append('company_name', companyName);
+  formData.append('Theme_Color', themeColor);
+  formData.append('primary_color', themeColor);
+  formData.append('Accent_Color', accentColor);
+  formData.append('accent_color', accentColor);
+
+  // لا نرفق مفتاح الصورة أصلاً إلا لو العميل اختار ملف جديد فعلياً،
+  // عشان السيرفر ميمسحش اللوجو/الفافيكون المحفوظين له لو الحقل فاضي.
+  // ملاحظة: اسم الحقل الـ binary هنا "Logo_URL" / "Favicon_URL" عشان يطابق نفس
+  // اسم العمود المستخدم في باقي الكود. لو عقدة الرفع في n8n مستنية اسم حقل تاني
+  // (مثلاً "logo" أو "data")، غيّر الاسم في الـ formData.append الأول بس.
+  if (logoFile) {
+    // الملف الحقيقي كـ binary - ده اللي بيحل خطأ "expects input data to contain a binary file"
+    formData.append('Logo_URL', logoFile, logoFile.name);
+    // نسخة Base64 احتياطية كنص، لو الـ workflow بيقرأ Base64 بدل الـ binary مباشرة
+    const logoBase64 = await getBase64(logoFile);
+    formData.append('logo_base64', logoBase64);
+    formData.append('logo_base64_raw', stripBase64Prefix(logoBase64));
   }
 
-  await sendDataToN8n(payload, 'settings-msg');
+  if (faviconFile) {
+    formData.append('Favicon_URL', faviconFile, faviconFile.name);
+    const faviconBase64 = await getBase64(faviconFile);
+    formData.append('favicon_base64', faviconBase64);
+    formData.append('favicon_base64_raw', stripBase64Prefix(faviconBase64));
+  }
+
+  const success = await sendFormDataToN8n(formData, 'settings-msg');
+  if (success) {
+    // مسح اختيار الملفات بعد نجاح الرفع، اللوجو/الفافيكون الجديد هيتعرض من fetchAllClientData()
+    if (logoInput) logoInput.value = '';
+    if (faviconInput) faviconInput.value = '';
+  }
 }
 
 // ==========================================
