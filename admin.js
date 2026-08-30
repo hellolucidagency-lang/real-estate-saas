@@ -1,6 +1,6 @@
 // ==========================================
 // LUCIDIA SAAS - UNIFIED ADMIN DASHBOARD ENGINE
-// (V8.0 - REAL MULTIPART BINARY FILE UPLOADS + FULL PERSISTENCE / PER-CLIENT ISOLATION)
+// (V9.0 - STRICT 3-SECTOR DROPDOWNS / PURE JSON PAYLOADS / DYNAMIC FIELD INJECTION)
 // ==========================================
 
 window.CONFIG = window.CONFIG || {
@@ -24,10 +24,58 @@ const VALID_TABS = [
   'subscription'
 ];
 
+// ==========================================
+// خريطة القطاعات الثلاثة الصارمة - كل حاجة خاصة بكل قطاع متجمعة هنا في مكان واحد
+// ==========================================
+const SECTOR_CONFIG = {
+  clinics: {
+    match: (s) => s.includes('clinic') || s.includes('عياد'),
+    listTitle: 'إدارة الخدمات الطبية',
+    itemTitleLabel: 'اسم الخدمة الطبية / الكشف *',
+    itemPriceLabel: 'سعر الكشف / الإجراء (ج.م) *',
+    itemCategoryLabel: 'القسم الطبي *',
+    platform1Label: '🩺 حساب فيزيتا (Vezeeta)',
+    platform2Label: '🏥 حساب كلينيدو / سينا',
+    categories: ['كشف', 'استشارة', 'عملية'],
+    filterCategories: ['كشف', 'استشارة', 'عملية'],
+    showEstateFields: false
+  },
+  lawyers: {
+    match: (s) => s.includes('lawyer') || s.includes('محام') || s.includes('قانون'),
+    listTitle: 'إدارة الاستشارات والخدمات القانونية',
+    itemTitleLabel: 'اسم الاستشارة / الخدمة القانونية *',
+    itemPriceLabel: 'أتعاب الاستشارة / التوكيل (ج.م) *',
+    itemCategoryLabel: 'التخصص القانوني *',
+    platform1Label: '⚖️ رقم القيد بنقابة المحامين',
+    platform2Label: '💼 حساب لينكد إن (LinkedIn)',
+    categories: ['قضية', 'استشارة قانونية', 'عقد قانوني'],
+    filterCategories: ['قضية', 'استشارة قانونية', 'عقد قانوني'],
+    showEstateFields: false
+  },
+  estate: {
+    match: (s) => s.includes('estate') || s.includes('عقار'),
+    listTitle: 'إدارة العقارات والمشاريع',
+    itemTitleLabel: 'عنوان العقار / المشروع *',
+    itemPriceLabel: 'السعر الإجمالي (ج.م) *',
+    itemCategoryLabel: 'نوع العقار *',
+    platform1Label: '🏢 معرض عقارماب (Aqarmap)',
+    platform2Label: '🏠 حساب بروبرتي فايندر',
+    categories: ['شقة', 'فيلا', 'تاون هاوس', 'تجاري'],
+    filterCategories: ['شقة', 'فيلا', 'تاون هاوس', 'تجاري'],
+    showEstateFields: true
+  }
+};
+
+// القيم الثابتة اللي لازم نلتزم بيها حرفياً بغض النظر عن القطاع
+const STATUS_OPTIONS = ['متاح', 'تم البيع', 'تم الإيجار'];
+const ITEM_TYPE_OPTIONS = ['للبيع', 'للايجار'];
+
 let currentClient = null;
 let currentItems = [];
 let uploadedImages = [];
 let heroImageIndex = 0;
+let uploadedCertificates = [];
+let currentSectorKey = 'estate';
 
 document.addEventListener('DOMContentLoaded', async () => {
   await initDashboard();
@@ -36,9 +84,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function initDashboard() {
   console.log('🚀 Lucidia Dashboard Initialized...');
   loadClientData();
+  injectExtraItemFields();
+  injectExtraSettingsFields();
   customizeSectorUI();
   setupNavigationTabs();
   setupImageUploader();
+  setupCertificatesUploader();
   setupEventListeners();
 
   const savedPass = localStorage.getItem('lucidia_password');
@@ -92,7 +143,7 @@ window.logout = function() {
 function loadClientData() {
   const urlParams = new URLSearchParams(window.location.search);
   const clientWhatsapp = urlParams.get('client') || localStorage.getItem('lucidia_whatsapp') || '01110737888';
-  const sectorParam = urlParams.get('sector') || localStorage.getItem('lucidia_sector') || 'Lucidia Pro';
+  const sectorParam = urlParams.get('sector') || localStorage.getItem('lucidia_sector') || 'Lucidia Estate';
 
   currentClient = {
     whatsapp: clientWhatsapp,
@@ -109,9 +160,6 @@ function loadClientData() {
 // التنقل بين التابات (القائمة الجانبية بالكامل)
 // ==========================================
 function setupNavigationTabs() {
-  // كل أزرار السايدبار الحقيقية معرّفة بـ id="nav-<tab>" وتستدعي بالفعل
-  // onclick="switchTab('<tab>')" داخل الـ HTML، لكن نضيف هنا ربطاً إضافياً
-  // عبر JS لضمان عملها حتى لو تم حذف onclick من الـ HTML مستقبلاً.
   VALID_TABS.forEach(tabName => {
     const btn = document.getElementById('nav-' + tabName);
     if (btn) {
@@ -122,7 +170,6 @@ function setupNavigationTabs() {
     }
   });
 
-  // أي زر آخر يحمل data-tab بنفس الأسماء الصحيحة
   document.querySelectorAll('[data-tab]').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const tabName = btn.getAttribute('data-tab');
@@ -134,7 +181,6 @@ function setupNavigationTabs() {
   });
 }
 
-// دالة التبديل الرئيسية - تطابق تماماً معرفات الأقسام sec-* والأزرار nav-*
 window.switchTab = function(tabName) {
   if (!VALID_TABS.includes(tabName)) {
     console.warn('⚠️ اسم تاب غير معروف:', tabName);
@@ -175,7 +221,7 @@ function prepareAddItemForm() {
 }
 
 // ==========================================
-// زر تبديل السايدبار (موبايل)
+// أزرار السايدبار / الوضع الليلي / نافذة الدعم / نافذة الدفع
 // ==========================================
 window.toggleSidebar = function() {
   const sidebar = document.getElementById('sidebar');
@@ -222,10 +268,149 @@ window.closeInstapayModal = function() {
 };
 
 // ==========================================
-// تخصيص الواجهة حسب القطاع (Dynamic UI)
+// حقن الحقول الإضافية في فورم "إضافة عنصر" (Item_Category select, Status,
+// Item_Type, Area, Bedrooms, Bathrooms) - الـ HTML الأصلي فيه input نصي بس
+// لحقل القسم، فبنحوّله لـ select ديناميكياً، وبنضيف باقي الحقول قبل زر الحفظ
+// ==========================================
+function injectExtraItemFields() {
+  const form = document.getElementById('form-add-item');
+  const submitBtn = document.getElementById('prop-submit-btn');
+  if (!form || !submitBtn) return;
+
+  // تحويل حقل القسم من input نصي إلى select حقيقي (مرة واحدة فقط)
+  const categoryField = document.getElementById('item-category');
+  if (categoryField && categoryField.tagName !== 'SELECT') {
+    const select = document.createElement('select');
+    select.id = 'item-category';
+    select.required = true;
+    select.className = categoryField.className;
+    categoryField.parentNode.replaceChild(select, categoryField);
+  }
+
+  // منع الحقن المزدوج لو الدالة اتنادت أكتر من مرة
+  if (document.getElementById('item-status')) return;
+
+  const statusTypeWrapper = document.createElement('div');
+  statusTypeWrapper.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+  statusTypeWrapper.innerHTML = `
+    <div>
+      <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">حالة العنصر (Status) *</label>
+      <select id="item-status" required class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs">
+        ${STATUS_OPTIONS.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">نوع العرض (Item Type) *</label>
+      <select id="item-type" required class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs">
+        ${ITEM_TYPE_OPTIONS.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+      </select>
+    </div>
+  `;
+  form.insertBefore(statusTypeWrapper, submitBtn);
+
+  const estateWrapper = document.createElement('div');
+  estateWrapper.id = 'estate-fields-wrapper';
+  estateWrapper.className = 'grid grid-cols-1 md:grid-cols-3 gap-4';
+  estateWrapper.innerHTML = `
+    <div>
+      <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">المساحة (Area) م²</label>
+      <input type="number" id="item-area" placeholder="0" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
+    </div>
+    <div>
+      <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">عدد الغرف (Bedrooms)</label>
+      <input type="number" id="item-bedrooms" placeholder="0" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
+    </div>
+    <div>
+      <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">عدد الحمامات (Bathrooms)</label>
+      <input type="number" id="item-bathrooms" placeholder="0" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
+    </div>
+  `;
+  form.insertBefore(estateWrapper, submitBtn);
+}
+
+// ==========================================
+// حقن الحقول الإضافية في فورم "الهوية والبيانات العامة" و"وسائل التواصل"
+// (Share_Image_URL, Certificates_Images, Specialized_Platform_1/2, TikTok, LinkedIn)
+// ==========================================
+function injectExtraSettingsFields() {
+  const settingsForm = document.getElementById('settings-form');
+  const settingsSubmitBtn = document.getElementById('settings-submit-btn');
+
+  if (settingsForm && settingsSubmitBtn && !document.getElementById('setting-share-image')) {
+    const platformsWrapper = document.createElement('div');
+    platformsWrapper.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+    platformsWrapper.innerHTML = `
+      <div>
+        <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300" id="label-platform-1">المنصة المتخصصة الأولى</label>
+        <input type="text" id="setting-platform-1" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
+      </div>
+      <div>
+        <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300" id="label-platform-2">المنصة المتخصصة الثانية</label>
+        <input type="text" id="setting-platform-2" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs" />
+      </div>
+    `;
+    settingsForm.insertBefore(platformsWrapper, settingsSubmitBtn);
+
+    const imagesWrapper = document.createElement('div');
+    imagesWrapper.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+    imagesWrapper.innerHTML = `
+      <div>
+        <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">صورة المشاركة (Share Image)</label>
+        <label for="setting-share-image" class="dropzone-box bg-slate-50 dark:bg-slate-800/50 p-4">
+          <i data-lucide="image" class="w-6 h-6 text-slate-400 mb-2"></i>
+          <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">اضغط لرفع صورة المشاركة</span>
+          <span id="setting-share-image-name" class="text-[10px] font-bold text-blue-600 mt-1 truncate max-w-full px-2"></span>
+        </label>
+        <input type="file" id="setting-share-image" accept="image/*" class="hidden" />
+      </div>
+      <div>
+        <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">شهادات التكريم (Certificates)</label>
+        <label for="setting-certificates" class="dropzone-box bg-slate-50 dark:bg-slate-800/50 p-4">
+          <i data-lucide="award" class="w-6 h-6 text-slate-400 mb-2"></i>
+          <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">اضغط لرفع الشهادات (يمكن اختيار أكثر من صورة)</span>
+        </label>
+        <input type="file" id="setting-certificates" accept="image/*" multiple class="hidden" />
+        <div id="certificates-preview-container" class="mt-3 grid grid-cols-4 gap-2"></div>
+      </div>
+    `;
+    settingsForm.insertBefore(imagesWrapper, settingsSubmitBtn);
+  }
+
+  const socialForm = document.getElementById('social-form');
+  const socialSubmitBtn = document.getElementById('social-submit-btn');
+
+  if (socialForm && socialSubmitBtn && !document.getElementById('social-tiktok')) {
+    const extraSocialWrapper = document.createElement('div');
+    extraSocialWrapper.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+    extraSocialWrapper.innerHTML = `
+      <div>
+        <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">رابط تيك توك (TikTok)</label>
+        <input type="url" id="social-tiktok" placeholder="https://tiktok.com/@..." class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs font-mono dir-ltr text-left" />
+      </div>
+      <div>
+        <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">رابط لينكد إن (LinkedIn)</label>
+        <input type="url" id="social-linkedin" placeholder="https://linkedin.com/in/..." class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-xs font-mono dir-ltr text-left" />
+      </div>
+    `;
+    socialForm.insertBefore(extraSocialWrapper, socialSubmitBtn);
+  }
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// ==========================================
+// تخصيص الواجهة والقوائم المنسدلة حسب القطاع (3 قطاعات صارمة فقط)
 // ==========================================
 function customizeSectorUI() {
   const sector = (currentClient?.sector || '').toLowerCase();
+
+  let sectorKey = 'estate';
+  if (SECTOR_CONFIG.clinics.match(sector)) sectorKey = 'clinics';
+  else if (SECTOR_CONFIG.lawyers.match(sector)) sectorKey = 'lawyers';
+  else sectorKey = 'estate';
+
+  currentSectorKey = sectorKey;
+  const config = SECTOR_CONFIG[sectorKey];
 
   const itemTitleLabel = document.getElementById('label-item-title');
   const itemPriceLabel = document.getElementById('label-item-price');
@@ -234,56 +419,35 @@ function customizeSectorUI() {
   const platform2Label = document.getElementById('label-platform-2');
   const listTitle = document.getElementById('list-title');
 
+  if (itemTitleLabel) itemTitleLabel.innerText = config.itemTitleLabel;
+  if (itemPriceLabel) itemPriceLabel.innerText = config.itemPriceLabel;
+  if (itemCategoryLabel) itemCategoryLabel.innerText = config.itemCategoryLabel;
+  if (platform1Label) platform1Label.innerText = config.platform1Label;
+  if (platform2Label) platform2Label.innerText = config.platform2Label;
+  if (listTitle) listTitle.innerText = config.listTitle;
+
+  // تعبئة خيارات حقل القسم (select) حصرياً بقيم القطاع الحالي
+  const categorySelect = document.getElementById('item-category');
+  if (categorySelect && categorySelect.tagName === 'SELECT') {
+    categorySelect.innerHTML = config.categories.map(opt => `<option value="${opt}">${opt}</option>`).join('');
+  }
+
+  // إظهار/إخفاء حقول العقارات (المساحة/الغرف/الحمامات) حسب القطاع
+  const estateWrapper = document.getElementById('estate-fields-wrapper');
+  if (estateWrapper) {
+    estateWrapper.classList.toggle('hidden', !config.showEstateFields);
+  }
+
+  // أزرار الفلترة أعلى الجدول
   const filterContainer = document.getElementById('filter-group-estate');
-
-  if (sector.includes('clinic') || sector.includes('عياد')) {
-    // ================= قطاع العيادات =================
-    if (itemTitleLabel) itemTitleLabel.innerText = 'اسم الخدمة الطبية / الكشف *';
-    if (itemPriceLabel) itemPriceLabel.innerText = 'سعر الكشف / الإجراء (ج.م) *';
-    if (itemCategoryLabel) itemCategoryLabel.innerText = 'القسم الطبي *';
-    if (platform1Label) platform1Label.innerText = '🩺 حساب فيزيتا (Vezeeta)';
-    if (platform2Label) platform2Label.innerText = '🏥 حساب كلينيدو / سينا';
-    if (listTitle) listTitle.innerText = 'إدارة الخدمات الطبية';
-
-    if (filterContainer) {
-      filterContainer.innerHTML = `
-        <button type="button" onclick="filterCategory('all', this)" class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-blue-600 text-white transition">الكل</button>
-        <button type="button" onclick="filterCategory('خدمات طبية', this)" class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition">خدمات طبية</button>
-        <button type="button" onclick="filterCategory('كشوفات وعمليات', this)" class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition">كشوفات وعمليات</button>
-      `;
-    }
-  } else if (sector.includes('pro') || sector.includes('قانون') || sector.includes('محام')) {
-    // ================= قطاع المحاماة =================
-    if (itemTitleLabel) itemTitleLabel.innerText = 'اسم الاستشارة / الخدمة القانونية *';
-    if (itemPriceLabel) itemPriceLabel.innerText = 'أتعاب الاستشارة / التوكيل (ج.م) *';
-    if (itemCategoryLabel) itemCategoryLabel.innerText = 'التخصص القانوني *';
-    if (platform1Label) platform1Label.innerText = '⚖️ رقم القيد بنقابة المحامين';
-    if (platform2Label) platform2Label.innerText = '💼 حساب لينكد إن (LinkedIn)';
-    if (listTitle) listTitle.innerText = 'إدارة الاستشارات والخدمات القانونية';
-
-    if (filterContainer) {
-      filterContainer.innerHTML = `
-        <button type="button" onclick="filterCategory('all', this)" class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-blue-600 text-white transition">الكل</button>
-        <button type="button" onclick="filterCategory('استشارات', this)" class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition">استشارات قانونية</button>
-        <button type="button" onclick="filterCategory('قضايا', this)" class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition">قضايا وتوكيلات</button>
-      `;
-    }
-  } else {
-    // ================= قطاع العقارات (الافتراضي) =================
-    if (itemTitleLabel) itemTitleLabel.innerText = 'عنوان العقار / المشروع *';
-    if (itemPriceLabel) itemPriceLabel.innerText = 'السعر الإجمالي (ج.م) *';
-    if (itemCategoryLabel) itemCategoryLabel.innerText = 'نوع العقار / تشطيبات *';
-    if (platform1Label) platform1Label.innerText = '🏢 معرض عقارماب (Aqarmap)';
-    if (platform2Label) platform2Label.innerText = '🏠 حساب بروبرتي فايندر';
-    if (listTitle) listTitle.innerText = 'إدارة المنتجات / الخدمات';
-
-    if (filterContainer) {
-      filterContainer.innerHTML = `
-        <button type="button" onclick="filterCategory('all', this)" class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-blue-600 text-white transition">الكل</button>
-        <button type="button" onclick="filterCategory('عقارات', this)" class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition">العقارات</button>
-        <button type="button" onclick="filterCategory('تشطيبات', this)" class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition">التشطيبات</button>
-      `;
-    }
+  if (filterContainer) {
+    const buttonsHtml = ['all', ...config.filterCategories].map(cat => {
+      const isAll = cat === 'all';
+      const label = isAll ? 'الكل' : cat;
+      const activeClass = isAll ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700';
+      return `<button type="button" onclick="filterCategory('${cat}', this)" class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold ${activeClass} transition">${label}</button>`;
+    }).join('');
+    filterContainer.innerHTML = buttonsHtml;
   }
 
   if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -301,7 +465,7 @@ window.filterCategory = function(category, btnElement) {
   if (category === 'all') {
     renderItemsTable(currentItems);
   } else {
-    const filtered = currentItems.filter(item => (item.Item_Category || '').includes(category));
+    const filtered = currentItems.filter(item => (item.Item_Category || '') === category);
     renderItemsTable(filtered);
   }
 };
@@ -323,7 +487,7 @@ window.filterProperties = function(query) {
 };
 
 // ==========================================
-// جلب بيانات العميل والعناصر من n8n / Airtable
+// جلب بيانات العميل والعناصر من n8n / Airtable - دائماً مبني على client_whatsapp
 // ==========================================
 async function fetchAllClientData() {
   if (!currentClient || !currentClient.whatsapp) {
@@ -370,7 +534,7 @@ async function fetchAllClientData() {
 }
 
 // ==========================================
-// تحديث بيانات الهيدر والسايدبار (اللوجو + اسم الشركة)
+// تحديث بيانات الهيدر والسايدبار (اللوجو + اسم الشركة) - ثابتة لكل عميل بذاته
 // ==========================================
 function updateHeaderInfo(client) {
   const companyName = client.Company_Name || currentClient.company_name;
@@ -391,16 +555,15 @@ function updateHeaderInfo(client) {
   }
 
   const logoUrl = client.Logo_URL;
-  if (logoUrl && typeof logoUrl === 'string' && logoUrl.startsWith('http')) {
-    const allLogos = document.querySelectorAll('#sidebar-logo, .client-logo-preview');
-    allLogos.forEach(img => {
+  if (logoUrl && typeof logoUrl === 'string' && (logoUrl.startsWith('http') || logoUrl.startsWith('data:'))) {
+    document.querySelectorAll('#sidebar-logo, .client-logo-preview').forEach(img => {
       img.src = logoUrl;
       img.classList.remove('hidden');
     });
   }
 
   const faviconUrl = client.Favicon_URL;
-  if (faviconUrl && typeof faviconUrl === 'string' && faviconUrl.startsWith('http')) {
+  if (faviconUrl && typeof faviconUrl === 'string' && (faviconUrl.startsWith('http') || faviconUrl.startsWith('data:'))) {
     let faviconLink = document.querySelector('link[rel="icon"]');
     if (!faviconLink) {
       faviconLink = document.createElement('link');
@@ -474,7 +637,7 @@ function updateSubscriptionStats(client) {
 }
 
 // ==========================================
-// تعبئة نماذج الإعدادات تلقائياً (Auto-Populate) بكل البيانات المحفوظة
+// تعبئة كل نماذج الإعدادات تلقائياً (Auto-Populate) بكل البيانات المحفوظة
 // لهذا العميل بالذات (client_whatsapp) - أي حقل اتحفظ قبل كده لازم يظهر ثابت هنا
 // ==========================================
 function populateDashboardFields(client) {
@@ -482,8 +645,12 @@ function populateDashboardFields(client) {
   setVal('setting-agency-name', client.Company_Name);
   setVal('setting-color', client.Theme_Color || '#0284c7');
   setVal('setting-accent-color', client.Accent_Color);
+  setVal('setting-platform-1', client.Specialized_Platform_1);
+  setVal('setting-platform-2', client.Specialized_Platform_2);
   injectImagePreview('setting-logo', client.Logo_URL, 'setting-logo-name');
   injectImagePreview('setting-favicon', client.Favicon_URL, 'setting-favicon-name');
+  injectImagePreview('setting-share-image', client.Share_Image_URL, 'setting-share-image-name');
+  renderCertificatesPreview(client.Certificates_Images);
 
   // ---------- محتوى الصفحة الرئيسية ----------
   setVal('hero-title', client.Slogan || client.Hero_Title);
@@ -502,13 +669,15 @@ function populateDashboardFields(client) {
   setVal('social-maps', client.Maps_Link || client.Google_Maps);
   setVal('social-facebook', client.Facebook);
   setVal('social-instagram', client.Instagram);
+  setVal('social-tiktok', client.TikTok);
+  setVal('social-linkedin', client.LinkedIn);
 
   // ---------- الدومين المخصص ----------
   setVal('custom-domain-input', client.Custom_Domain);
 
   // ---------- التسويق والبيكسل ----------
   setVal('mkt-meta', client.Meta_Pixel_ID);
-  setVal('mkt-tiktok', client.TikTok_Pixel_ID || client.TikTok);
+  setVal('mkt-tiktok', client.TikTok_Pixel_ID);
   setVal('mkt-snapchat', client.Snapchat_Pixel_ID);
   setVal('mkt-ga4', client.GA4_ID);
 }
@@ -521,8 +690,8 @@ function setVal(elementId, value) {
 }
 
 // ==========================================
-// إظهار معاينة ثابتة لصورة محفوظة مسبقاً (لوجو / فافيكون) داخل الـ dropzone
-// حتى يشوف العميل إن صورته فعلاً محفوظة وثابتة له دون الحاجة لرفعها كل مرة
+// إظهار معاينة ثابتة لصورة محفوظة مسبقاً (لوجو / فافيكون / صورة مشاركة)
+// داخل الـ dropzone حتى يشوف العميل إن صورته فعلاً محفوظة وثابتة له
 // ==========================================
 function injectImagePreview(fileInputId, imageUrl, nameLabelId) {
   const fileInput = document.getElementById(fileInputId);
@@ -532,7 +701,9 @@ function injectImagePreview(fileInputId, imageUrl, nameLabelId) {
 
   let previewImg = document.getElementById(fileInputId + '-preview');
 
-  if (!imageUrl || typeof imageUrl !== 'string' || !imageUrl.startsWith('http')) {
+  const isValidImage = imageUrl && typeof imageUrl === 'string' && (imageUrl.startsWith('http') || imageUrl.startsWith('data:'));
+
+  if (!isValidImage) {
     if (previewImg) previewImg.classList.add('hidden');
     return;
   }
@@ -552,8 +723,27 @@ function injectImagePreview(fileInputId, imageUrl, nameLabelId) {
   }
 }
 
+// معاينة شهادات التكريم المحفوظة مسبقاً (مصفوفة روابط)
+function renderCertificatesPreview(certificatesUrls) {
+  const container = document.getElementById('certificates-preview-container');
+  if (!container) return;
+
+  let urls = [];
+  if (Array.isArray(certificatesUrls)) {
+    urls = certificatesUrls.map(c => (typeof c === 'string' ? c : c?.url)).filter(Boolean);
+  } else if (typeof certificatesUrls === 'string' && certificatesUrls) {
+    urls = certificatesUrls.split(',').map(u => u.trim()).filter(Boolean);
+  }
+
+  if (urls.length === 0) return;
+
+  container.innerHTML = urls.map(url => `
+    <img src="${url}" class="w-full h-16 object-cover rounded-lg border border-slate-200 dark:border-slate-700" />
+  `).join('');
+}
+
 // ==========================================
-// رفع الصور ومعاينتها + تحديد صورة الغلاف
+// رفع الصور ومعاينتها + تحديد صورة الغلاف (صور المنتجات)
 // ==========================================
 function setupImageUploader() {
   const fileInput = document.getElementById('item-image-input');
@@ -562,7 +752,6 @@ function setupImageUploader() {
   fileInput.addEventListener('change', (e) => {
     const files = Array.from(e.target.files);
     let loadedCount = 0;
-
     if (files.length === 0) return;
 
     files.forEach(file => {
@@ -619,7 +808,80 @@ window.removeImage = function(index, event) {
 };
 
 // ==========================================
-// إضافة عنصر جديد (منتج / خدمة)
+// رفع شهادات التكريم (Certificates_Images) - رفع متعدد مع معاينة وحذف
+// ==========================================
+function setupCertificatesUploader() {
+  const fileInput = document.getElementById('setting-certificates');
+  if (!fileInput) return;
+
+  fileInput.addEventListener('change', (e) => {
+    const files = Array.from(e.target.files);
+    let loadedCount = 0;
+    if (files.length === 0) return;
+
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        uploadedCertificates.push({ file, url: event.target.result });
+        loadedCount++;
+        if (loadedCount === files.length) {
+          renderCertificatesUploadPreview();
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+    fileInput.value = '';
+  });
+}
+
+function renderCertificatesUploadPreview() {
+  const container = document.getElementById('certificates-preview-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  uploadedCertificates.forEach((imgObj, index) => {
+    const div = document.createElement('div');
+    div.className = 'relative rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 h-16 group';
+    div.innerHTML = `
+      <img src="${imgObj.url}" class="w-full h-full object-cover">
+      <button type="button" class="absolute top-0.5 left-0.5 bg-red-500/80 hover:bg-red-600 text-white p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition" onclick="removeCertificate(${index}, event)">
+        <i data-lucide="x" class="w-3 h-3"></i>
+      </button>
+    `;
+    container.appendChild(div);
+  });
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+window.removeCertificate = function(index, event) {
+  event.stopPropagation();
+  uploadedCertificates.splice(index, 1);
+  renderCertificatesUploadPreview();
+};
+
+// ==========================================
+// أدوات قفل زر الحفظ أثناء الإرسال (Debounce) - تمنع إرسال أكتر من طلب مرة واحدة
+// ==========================================
+function lockButton(btn, loadingText) {
+  if (!btn) return null;
+  if (btn.disabled) return null; // في طلب شغال بالفعل
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> ${loadingText || 'جاري الحفظ...'}`;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  return originalHtml;
+}
+
+function unlockButton(btn, originalHtml) {
+  if (!btn) return;
+  btn.disabled = false;
+  if (originalHtml) btn.innerHTML = originalHtml;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// ==========================================
+// إضافة عنصر جديد (منتج / خدمة) - JSON خالص، مع حقول العقارات الشرطية
 // ==========================================
 async function handleAddItem(e) {
   if (e) e.preventDefault();
@@ -629,61 +891,90 @@ async function handleAddItem(e) {
     return;
   }
 
+  const submitBtn = document.getElementById('prop-submit-btn');
+  if (submitBtn && submitBtn.disabled) return;
+
   const title = document.getElementById('item-title')?.value.trim();
   if (!title) return alert('يرجى كتابة الاسم/العنوان');
 
-  const price = document.getElementById('item-price')?.value || 0;
-  const category = document.getElementById('item-category')?.value || 'عام';
-  const description = document.getElementById('item-desc')?.value || '';
+  const originalHtml = lockButton(submitBtn, 'جاري الحفظ...');
 
-  const formData = new FormData();
-  formData.append('action', 'add_item');
-  formData.append('client_whatsapp', currentClient.whatsapp);
-  formData.append('sector', currentClient.sector || '');
+  try {
+    const price = document.getElementById('item-price')?.value || 0;
+    const category = document.getElementById('item-category')?.value || '';
+    const description = document.getElementById('item-desc')?.value || '';
+    const status = document.getElementById('item-status')?.value || STATUS_OPTIONS[0];
+    const itemType = document.getElementById('item-type')?.value || ITEM_TYPE_OPTIONS[0];
 
-  // أسماء أعمدة Airtable الحقيقية (PascalCase)
-  formData.append('Item_Title', title);
-  formData.append('Price', price);
-  formData.append('Item_Category', category);
-  formData.append('Description', description);
-  // نسخة مطابقة بصيغة snake_case لضمان توافق أي workflow في n8n يستخدم مسميات مختلفة
-  formData.append('title', title);
-  formData.append('price', price);
-  formData.append('category', category);
-  formData.append('description', description);
+    const imagesArray = uploadedImages.map(img => ({ name: img.file.name, data: img.url }));
+    const heroImageBase64 = uploadedImages[heroImageIndex]?.url || '';
 
-  // الصور الحقيقية كـ binary - كل صورة بحقل منفصل (image_0, image_1, ...)
-  // ده اللي بيحل خطأ "expects input data to contain a binary file, but none was found"
-  // اللي كان بيحصل لما كنا بنبعت الصور كنص Base64 جوه JSON بس
-  uploadedImages.forEach((img, index) => {
-    formData.append(`image_${index}`, img.file, img.file.name);
-  });
-  // صورة الغلاف المختارة كحقل binary منفصل يسهل على السيرفر تمييزه
-  const heroImage = uploadedImages[heroImageIndex];
-  if (heroImage) {
-    formData.append('hero_image', heroImage.file, heroImage.file.name);
-  }
+    const payload = {
+      action: 'add_item',
+      client_whatsapp: currentClient.whatsapp,
+      sector: currentClient.sector,
 
-  // نسخة Base64 احتياطية كنص لكل الصور، لو الـ workflow بيقرأ Base64 بدل الـ binary
-  const imagesBase64Array = uploadedImages.map(img => ({ name: img.file.name, data: img.url }));
-  formData.append('images_base64', JSON.stringify(imagesBase64Array));
-  formData.append('hero_image_base64', heroImage ? heroImage.url : '');
+      // أسماء أعمدة Airtable الحقيقية (PascalCase)
+      Item_Title: title,
+      Price: price,
+      Item_Category: category,
+      Description: description,
+      Status: status,
+      Item_Type: itemType,
+      // نسخة snake_case لضمان التوافق مع أي workflow يستخدم مسميات مختلفة
+      title: title,
+      price: price,
+      category: category,
+      description: description,
+      status: status,
+      item_type: itemType,
 
-  const success = await sendFormDataToN8n(formData, null);
-  if (success) {
-    alert('✅ تم الحفظ بنجاح');
-    document.getElementById('form-add-item')?.reset();
-    uploadedImages = [];
-    heroImageIndex = 0;
-    renderImagesPreview();
-    switchTab('properties-list');
-  } else {
-    alert('❌ حدث خطأ أثناء الحفظ في السيرفر.');
+      // الصور كنص Base64 Data URL جوه نفس الـ JSON
+      images: imagesArray,
+      hero_image_url: heroImageBase64
+    };
+
+    // حقول العقارات تتبعت فقط لو القطاع الحالي عقارات
+    if (SECTOR_CONFIG[currentSectorKey].showEstateFields) {
+      const area = document.getElementById('item-area')?.value || '';
+      const bedrooms = document.getElementById('item-bedrooms')?.value || '';
+      const bathrooms = document.getElementById('item-bathrooms')?.value || '';
+      payload.Area = area;
+      payload.Bedrooms = bedrooms;
+      payload.Bathrooms = bathrooms;
+      payload.area = area;
+      payload.bedrooms = bedrooms;
+      payload.bathrooms = bathrooms;
+    }
+
+    const res = await fetch(window.CONFIG.WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const success = await handleN8nResponse(res, null);
+    if (success) {
+      alert('✅ تم الحفظ بنجاح');
+      document.getElementById('form-add-item')?.reset();
+      uploadedImages = [];
+      heroImageIndex = 0;
+      renderImagesPreview();
+      switchTab('properties-list');
+    } else {
+      alert('❌ حدث خطأ أثناء الحفظ في السيرفر.');
+    }
+  } catch (err) {
+    console.error('❌ خطأ أثناء حفظ العنصر:', err);
+    alert('❌ خطأ أثناء الحفظ');
+  } finally {
+    unlockButton(submitBtn, originalHtml);
   }
 }
 
 // ==========================================
-// عرض جدول العناصر (Airtable columns: Item_Title, Price, Item_Category, Description)
+// عرض جدول العناصر - الصورة المصغرة بتتاخد حصرياً من Cloudinary_Images
+// (تجاهل تام لحقل Attachments كما طُلب)
 // ==========================================
 function renderItemsTable(itemsToRender) {
   const tableBody = document.getElementById('items-table-body');
@@ -723,28 +1014,20 @@ function renderItemsTable(itemsToRender) {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// يحاول استخراج رابط صورة العنصر من كل الأسماء المحتملة اللي ممكن يرجعها Airtable/n8n
+// الرابط الدائم لصورة المنتج - حصرياً من Cloudinary_Images، بلا أي رجوع لـ Attachments
 function getItemImageUrl(item) {
-  if (item.hero_image_url && typeof item.hero_image_url === 'string') return item.hero_image_url;
+  const raw = item.Cloudinary_Images;
+  if (!raw) return '';
 
-  if (item.Cloudinary_Images) {
-    if (Array.isArray(item.Cloudinary_Images)) {
-      const first = item.Cloudinary_Images[0];
-      if (typeof first === 'string') return first;
-      if (first && first.url) return first.url;
-    } else if (typeof item.Cloudinary_Images === 'string') {
-      return item.Cloudinary_Images.split(',')[0].trim();
-    }
+  if (Array.isArray(raw)) {
+    const first = raw[0];
+    if (typeof first === 'string') return first;
+    if (first && first.url) return first.url;
+    return '';
   }
 
-  if (item.Attachments) {
-    if (Array.isArray(item.Attachments)) {
-      const first = item.Attachments[0];
-      if (typeof first === 'string') return first;
-      if (first && first.url) return first.url;
-    } else if (typeof item.Attachments === 'string') {
-      return item.Attachments.split(',')[0].trim();
-    }
+  if (typeof raw === 'string') {
+    return raw.split(',')[0].trim();
   }
 
   return '';
@@ -769,7 +1052,7 @@ function escapeHtml(text) {
 }
 
 // ==========================================
-// حذف عنصر
+// حذف عنصر - JSON خالص، مبني على client_whatsapp
 // ==========================================
 window.deleteItem = async function(itemId) {
   if (!currentClient || !currentClient.whatsapp) {
@@ -873,11 +1156,8 @@ function setupCsvImporter() {
 }
 
 // ==========================================
-// دوال مساعدة عامة للتحويل إلى Base64 وإرسال البيانات
+// دالة تحويل ملف إلى Base64 Data URL كامل (data:image/png;base64,...)
 // ==========================================
-
-// بترجع نص Base64 كامل بصيغة Data URL (data:image/png;base64,....)
-// - ده مفيد لعرض الصورة فورًا في <img src="..."> كمعاينة قبل الرفع
 function getBase64(file) {
   return new Promise((resolve, reject) => {
     if (!file) {
@@ -891,16 +1171,8 @@ function getBase64(file) {
   });
 }
 
-// بتشيل جزء "data:image/png;base64," وترجع نص Base64 الخام فقط
-// - بعض الـ workflows في n8n بتستنى base64 نضيف من غير الـ prefix
-function stripBase64Prefix(dataUrl) {
-  if (!dataUrl || typeof dataUrl !== 'string') return '';
-  const commaIndex = dataUrl.indexOf(',');
-  return commaIndex !== -1 ? dataUrl.substring(commaIndex + 1) : dataUrl;
-}
-
 // ==========================================
-// إرسال JSON عادي (للفورمات اللي مفيهاش ملفات: SEO / سوشيال / دومين / محتوى)
+// إرسال JSON خالص لكل عمليات الحفظ - بدون FormData نهائياً (تفادي خطأ /tmp/)
 // ==========================================
 async function sendDataToN8n(payload, messageEl) {
   if (!currentClient || !currentClient.whatsapp) {
@@ -924,37 +1196,8 @@ async function sendDataToN8n(payload, messageEl) {
   }
 }
 
-// ==========================================
-// إرسال Multipart/FormData (لأي فورم فيه صورة/ملف فعلي - اللوجو، الفافيكون، صور المنتجات)
-// السبب: عقدة رفع الملفات في n8n بترفض نص JSON/Base64 وبتستنى "binary file" حقيقي جوه الطلب،
-// فلازم نبعت الملفات كـ multipart/form-data بدل ما نلفهم جوه JSON.
-// مهم: متحطش Content-Type يدوي هنا؛ المتصفح بيولّده لوحده مع الـ boundary الصحيح.
-// ==========================================
-async function sendFormDataToN8n(formData, messageEl) {
-  if (!currentClient || !currentClient.whatsapp) {
-    showFormMessage(messageEl, '❌ تعذر تحديد رقم العميل، برجاء إعادة تحميل الصفحة', false);
-    return false;
-  }
-  formData.set('client_whatsapp', currentClient.whatsapp);
-
-  try {
-    const res = await fetch(window.CONFIG.WEBHOOK_URL, {
-      method: 'POST',
-      body: formData
-    });
-
-    return await handleN8nResponse(res, messageEl);
-  } catch (err) {
-    console.error('❌ خطأ في رفع الملف:', err);
-    showFormMessage(messageEl, '❌ تعذر الاتصال بالسيرفر أثناء رفع الملف.', false);
-    return false;
-  }
-}
-
-// ==========================================
-// معالجة موحّدة لرد السيرفر: بنتأكد إن الرد فعلاً { success: true } قبل ما نعتبر
+// معالجة موحّدة لرد السيرفر - بنتأكد إن الرد فعلاً { success: true } قبل ما نعتبر
 // العملية نجحت، وبعدين فورًا بنعمل Re-hydration كامل للوحة عبر fetchAllClientData()
-// ==========================================
 async function handleN8nResponse(res, messageEl) {
   let data = {};
   try {
@@ -988,58 +1231,133 @@ function showFormMessage(elementId, text, success) {
 }
 
 // ==========================================
-// حفظ إعدادات الهوية العامة (Company_Name, Theme_Color, Logo_URL, Favicon_URL)
+// حفظ إعدادات الهوية العامة + كل الحقول المرتبطة بيها (SEO، سوشيال ميديا،
+// بيكسلات التسويق، المنصات المتخصصة، صورة المشاركة، شهادات التكريم)
+// في طلب JSON واحد شامل - بدون FormData نهائياً، والصور كنص Base64 Data URL
 // ==========================================
 async function handleSettingsSubmit(e) {
   e.preventDefault();
 
-  const companyName = document.getElementById('setting-agency-name')?.value || '';
-  const themeColor = document.getElementById('setting-color')?.value || '';
-  const accentColor = document.getElementById('setting-accent-color')?.value || '';
-
-  const logoInput = document.getElementById('setting-logo');
-  const faviconInput = document.getElementById('setting-favicon');
-  const logoFile = logoInput && logoInput.files.length > 0 ? logoInput.files[0] : null;
-  const faviconFile = faviconInput && faviconInput.files.length > 0 ? faviconInput.files[0] : null;
-
-  const formData = new FormData();
-  formData.append('action', 'update_settings');
-  formData.append('client_whatsapp', currentClient.whatsapp);
-
-  // الحقول النصية بصيغتي Airtable و snake_case مع بعض
-  formData.append('Company_Name', companyName);
-  formData.append('company_name', companyName);
-  formData.append('Theme_Color', themeColor);
-  formData.append('primary_color', themeColor);
-  formData.append('Accent_Color', accentColor);
-  formData.append('accent_color', accentColor);
-
-  // لا نرفق مفتاح الصورة أصلاً إلا لو العميل اختار ملف جديد فعلياً،
-  // عشان السيرفر ميمسحش اللوجو/الفافيكون المحفوظين له لو الحقل فاضي.
-  // ملاحظة: اسم الحقل الـ binary هنا "Logo_URL" / "Favicon_URL" عشان يطابق نفس
-  // اسم العمود المستخدم في باقي الكود. لو عقدة الرفع في n8n مستنية اسم حقل تاني
-  // (مثلاً "logo" أو "data")، غيّر الاسم في الـ formData.append الأول بس.
-  if (logoFile) {
-    // الملف الحقيقي كـ binary - ده اللي بيحل خطأ "expects input data to contain a binary file"
-    formData.append('Logo_URL', logoFile, logoFile.name);
-    // نسخة Base64 احتياطية كنص، لو الـ workflow بيقرأ Base64 بدل الـ binary مباشرة
-    const logoBase64 = await getBase64(logoFile);
-    formData.append('logo_base64', logoBase64);
-    formData.append('logo_base64_raw', stripBase64Prefix(logoBase64));
+  if (!currentClient || !currentClient.whatsapp) {
+    alert('❌ تعذر تحديد رقم العميل، برجاء إعادة تحميل الصفحة');
+    return;
   }
 
-  if (faviconFile) {
-    formData.append('Favicon_URL', faviconFile, faviconFile.name);
-    const faviconBase64 = await getBase64(faviconFile);
-    formData.append('favicon_base64', faviconBase64);
-    formData.append('favicon_base64_raw', stripBase64Prefix(faviconBase64));
-  }
+  const submitBtn = document.getElementById('settings-submit-btn');
+  if (submitBtn && submitBtn.disabled) return;
 
-  const success = await sendFormDataToN8n(formData, 'settings-msg');
-  if (success) {
-    // مسح اختيار الملفات بعد نجاح الرفع، اللوجو/الفافيكون الجديد هيتعرض من fetchAllClientData()
-    if (logoInput) logoInput.value = '';
-    if (faviconInput) faviconInput.value = '';
+  const originalHtml = lockButton(submitBtn, 'جاري الحفظ...');
+
+  try {
+    // ---------- الهوية والبيانات العامة ----------
+    const companyName = document.getElementById('setting-agency-name')?.value || '';
+    const themeColor = document.getElementById('setting-color')?.value || '';
+    const accentColor = document.getElementById('setting-accent-color')?.value || '';
+    const platform1 = document.getElementById('setting-platform-1')?.value || '';
+    const platform2 = document.getElementById('setting-platform-2')?.value || '';
+
+    // ---------- تحويل كل الصور إلى Base64 Data URL ----------
+    const logoInput = document.getElementById('setting-logo');
+    const faviconInput = document.getElementById('setting-favicon');
+    const shareImageInput = document.getElementById('setting-share-image');
+
+    let logoBase64 = '';
+    if (logoInput && logoInput.files.length > 0) {
+      logoBase64 = await getBase64(logoInput.files[0]);
+    }
+
+    let faviconBase64 = '';
+    if (faviconInput && faviconInput.files.length > 0) {
+      faviconBase64 = await getBase64(faviconInput.files[0]);
+    }
+
+    let shareImageBase64 = '';
+    if (shareImageInput && shareImageInput.files.length > 0) {
+      shareImageBase64 = await getBase64(shareImageInput.files[0]);
+    }
+
+    // شهادات التكريم - مصفوفة من نصوص Base64 Data URL
+    const certificatesBase64Array = uploadedCertificates.map(cert => cert.url);
+
+    // ---------- عنوان ووصف الـ SEO ----------
+    const seoTitle = document.getElementById('seo-title')?.value || '';
+    const seoDesc = document.getElementById('seo-desc')?.value || '';
+
+    // ---------- أرقام التواصل وروابط السوشيال ميديا ----------
+    const whatsapp = document.getElementById('social-whatsapp')?.value || '';
+    const phone = document.getElementById('social-phone')?.value || '';
+    const maps = document.getElementById('social-maps')?.value || '';
+    const facebook = document.getElementById('social-facebook')?.value || '';
+    const instagram = document.getElementById('social-instagram')?.value || '';
+    const tiktok = document.getElementById('social-tiktok')?.value || '';
+    const linkedin = document.getElementById('social-linkedin')?.value || '';
+
+    // ---------- معرفات بيكسلات التسويق ----------
+    const metaPixel = document.getElementById('mkt-meta')?.value || '';
+    const tiktokPixel = document.getElementById('mkt-tiktok')?.value || '';
+    const snapPixel = document.getElementById('mkt-snapchat')?.value || '';
+    const ga4Id = document.getElementById('mkt-ga4')?.value || '';
+
+    // ---------- تجميع كل الحقول بدون استثناء في Payload واحد ----------
+    const payload = {
+      action: 'update_settings',
+      client_whatsapp: currentClient.whatsapp,
+
+      // الهوية العامة
+      Company_Name: companyName,
+      Theme_Color: themeColor,
+      Accent_Color: accentColor,
+      Slogan: document.getElementById('hero-title')?.value || '',
+
+      // المنصات المتخصصة
+      Specialized_Platform_1: platform1,
+      Specialized_Platform_2: platform2,
+
+      // الصور كنص Base64 Data URL (فاضي = العميل ماغيّرش الصورة، السيرفر يسيبها زي ماهي)
+      Logo_URL: logoBase64,
+      Favicon_URL: faviconBase64,
+      Share_Image_URL: shareImageBase64,
+      Certificates_Images: certificatesBase64Array,
+
+      // SEO
+      SEO_Title: seoTitle,
+      SEO_Description: seoDesc,
+      '\u2060SEO_Description\u2060': seoDesc,
+
+      // أرقام التواصل وروابط السوشيال ميديا
+      Whatsapp: whatsapp,
+      Phone: phone,
+      Maps_Link: maps,
+      Facebook: facebook,
+      Instagram: instagram,
+      TikTok: tiktok,
+      LinkedIn: linkedin,
+
+      // بيكسلات التسويق
+      Meta_Pixel_ID: metaPixel,
+      TikTok_Pixel_ID: tiktokPixel,
+      Snapchat_Pixel_ID: snapPixel,
+      GA4_ID: ga4Id
+    };
+
+    const res = await fetch(window.CONFIG.WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const success = await handleN8nResponse(res, 'settings-msg');
+    if (success) {
+      if (logoInput) logoInput.value = '';
+      if (faviconInput) faviconInput.value = '';
+      if (shareImageInput) shareImageInput.value = '';
+      uploadedCertificates = [];
+    }
+  } catch (err) {
+    console.error('❌ خطأ أثناء حفظ الإعدادات:', err);
+    showFormMessage('settings-msg', '❌ تعذر الاتصال بالسيرفر.', false);
+  } finally {
+    unlockButton(submitBtn, originalHtml);
   }
 }
 
@@ -1049,29 +1367,25 @@ async function handleSettingsSubmit(e) {
 async function handleSocialSubmit(e) {
   e.preventDefault();
 
-  const whatsapp = document.getElementById('social-whatsapp')?.value || '';
-  const phone = document.getElementById('social-phone')?.value || '';
-  const maps = document.getElementById('social-maps')?.value || '';
-  const facebook = document.getElementById('social-facebook')?.value || '';
-  const instagram = document.getElementById('social-instagram')?.value || '';
+  const submitBtn = document.getElementById('social-submit-btn');
+  if (submitBtn && submitBtn.disabled) return;
+  const originalHtml = lockButton(submitBtn, 'جاري الحفظ...');
 
-  const payload = {
-    action: 'update_social',
-    client_whatsapp: currentClient.whatsapp,
-    // Airtable field names
-    Whatsapp: whatsapp,
-    Phone: phone,
-    Maps_Link: maps,
-    Facebook: facebook,
-    Instagram: instagram,
-    // snake_case fallback
-    whatsapp: whatsapp,
-    phone: phone,
-    maps: maps,
-    facebook: facebook,
-    instagram: instagram
-  };
-  await sendDataToN8n(payload, 'social-msg');
+  try {
+    const payload = {
+      action: 'update_social',
+      Whatsapp: document.getElementById('social-whatsapp')?.value || '',
+      Phone: document.getElementById('social-phone')?.value || '',
+      Maps_Link: document.getElementById('social-maps')?.value || '',
+      Facebook: document.getElementById('social-facebook')?.value || '',
+      Instagram: document.getElementById('social-instagram')?.value || '',
+      TikTok: document.getElementById('social-tiktok')?.value || '',
+      LinkedIn: document.getElementById('social-linkedin')?.value || ''
+    };
+    await sendDataToN8n(payload, 'social-msg');
+  } finally {
+    unlockButton(submitBtn, originalHtml);
+  }
 }
 
 // ==========================================
@@ -1080,21 +1394,22 @@ async function handleSocialSubmit(e) {
 async function handleSeoSubmit(e) {
   e.preventDefault();
 
-  const seoTitle = document.getElementById('seo-title')?.value || '';
-  const seoDesc = document.getElementById('seo-desc')?.value || '';
+  const submitBtn = document.getElementById('seo-submit-btn');
+  if (submitBtn && submitBtn.disabled) return;
+  const originalHtml = lockButton(submitBtn, 'جاري الحفظ...');
 
-  const payload = {
-    action: 'update_seo',
-    client_whatsapp: currentClient.whatsapp,
-    // Airtable field names (بما فيهم النسخة اللي فيها Word Joiner المخفي حول الاسم)
-    SEO_Title: seoTitle,
-    SEO_Description: seoDesc,
-    '\u2060SEO_Description\u2060': seoDesc,
-    // snake_case fallback
-    seo_title: seoTitle,
-    seo_desc: seoDesc
-  };
-  await sendDataToN8n(payload, 'seo-msg');
+  try {
+    const seoDesc = document.getElementById('seo-desc')?.value || '';
+    const payload = {
+      action: 'update_seo',
+      SEO_Title: document.getElementById('seo-title')?.value || '',
+      SEO_Description: seoDesc,
+      '\u2060SEO_Description\u2060': seoDesc
+    };
+    await sendDataToN8n(payload, 'seo-msg');
+  } finally {
+    unlockButton(submitBtn, originalHtml);
+  }
 }
 
 // ==========================================
@@ -1103,26 +1418,22 @@ async function handleSeoSubmit(e) {
 async function handleMarketingSubmit(e) {
   e.preventDefault();
 
-  const metaPixel = document.getElementById('mkt-meta')?.value || '';
-  const tiktokPixel = document.getElementById('mkt-tiktok')?.value || '';
-  const snapPixel = document.getElementById('mkt-snapchat')?.value || '';
-  const ga4Id = document.getElementById('mkt-ga4')?.value || '';
+  const submitBtn = document.getElementById('marketing-submit-btn');
+  if (submitBtn && submitBtn.disabled) return;
+  const originalHtml = lockButton(submitBtn, 'جاري الحفظ...');
 
-  const payload = {
-    action: 'update_marketing',
-    client_whatsapp: currentClient.whatsapp,
-    // Airtable field names
-    Meta_Pixel_ID: metaPixel,
-    TikTok_Pixel_ID: tiktokPixel,
-    Snapchat_Pixel_ID: snapPixel,
-    GA4_ID: ga4Id,
-    // snake_case fallback
-    meta_pixel: metaPixel,
-    tiktok_pixel: tiktokPixel,
-    snapchat_pixel: snapPixel,
-    ga4_id: ga4Id
-  };
-  await sendDataToN8n(payload, 'marketing-msg');
+  try {
+    const payload = {
+      action: 'update_marketing',
+      Meta_Pixel_ID: document.getElementById('mkt-meta')?.value || '',
+      TikTok_Pixel_ID: document.getElementById('mkt-tiktok')?.value || '',
+      Snapchat_Pixel_ID: document.getElementById('mkt-snapchat')?.value || '',
+      GA4_ID: document.getElementById('mkt-ga4')?.value || ''
+    };
+    await sendDataToN8n(payload, 'marketing-msg');
+  } finally {
+    unlockButton(submitBtn, originalHtml);
+  }
 }
 
 // ==========================================
@@ -1131,15 +1442,19 @@ async function handleMarketingSubmit(e) {
 async function handleDomainSubmit(e) {
   e.preventDefault();
 
-  const domain = document.getElementById('custom-domain-input')?.value || '';
+  const submitBtn = document.getElementById('domain-submit-btn');
+  if (submitBtn && submitBtn.disabled) return;
+  const originalHtml = lockButton(submitBtn, 'جاري الحفظ...');
 
-  const payload = {
-    action: 'update_domain',
-    client_whatsapp: currentClient.whatsapp,
-    Custom_Domain: domain,
-    custom_domain: domain
-  };
-  await sendDataToN8n(payload, 'domain-msg');
+  try {
+    const payload = {
+      action: 'update_domain',
+      Custom_Domain: document.getElementById('custom-domain-input')?.value || ''
+    };
+    await sendDataToN8n(payload, 'domain-msg');
+  } finally {
+    unlockButton(submitBtn, originalHtml);
+  }
 }
 
 // ==========================================
@@ -1148,31 +1463,26 @@ async function handleDomainSubmit(e) {
 async function handleContentSubmit(e) {
   e.preventDefault();
 
-  const heroTitle = document.getElementById('hero-title')?.value || '';
-  const heroSubtitle = document.getElementById('hero-subtitle')?.value || '';
-  const aboutExp = document.getElementById('about-exp')?.value || '';
-  const aboutSatisfaction = document.getElementById('about-satisfaction')?.value || '';
+  const submitBtn = document.getElementById('content-submit-btn');
+  if (submitBtn && submitBtn.disabled) return;
+  const originalHtml = lockButton(submitBtn, 'جاري الحفظ...');
 
-  const payload = {
-    action: 'update_content',
-    client_whatsapp: currentClient.whatsapp,
-    // Airtable field names
-    Slogan: heroTitle,
-    Hero_Title: heroTitle,
-    Hero_Subtitle: heroSubtitle,
-    About_Exp: aboutExp,
-    About_Satisfaction: aboutSatisfaction,
-    // snake_case fallback
-    hero_title: heroTitle,
-    hero_subtitle: heroSubtitle,
-    about_exp: aboutExp,
-    about_satisfaction: aboutSatisfaction
-  };
-  await sendDataToN8n(payload, 'content-msg');
+  try {
+    const payload = {
+      action: 'update_content',
+      Slogan: document.getElementById('hero-title')?.value || '',
+      Hero_Subtitle: document.getElementById('hero-subtitle')?.value || '',
+      About_Exp: document.getElementById('about-exp')?.value || '',
+      About_Satisfaction: document.getElementById('about-satisfaction')?.value || ''
+    };
+    await sendDataToN8n(payload, 'content-msg');
+  } finally {
+    unlockButton(submitBtn, originalHtml);
+  }
 }
 
 // ==========================================
-// ربط كل الفورمات بمعالجاتها الصحيحة (تطابق الـ IDs الحقيقية في الـ HTML)
+// ربط كل الفورمات بمعالجاتها الصحيحة
 // ==========================================
 function setupEventListeners() {
   document.getElementById('form-add-item')?.addEventListener('submit', handleAddItem);
