@@ -1,5 +1,6 @@
 // ==========================================
-// LUCIDIA SAAS - UNIFIED ADMIN DASHBOARD ENGINE (V6.0 - FULL INTERACTIVITY / AIRTABLE MAPPED)
+// LUCIDIA SAAS - UNIFIED ADMIN DASHBOARD ENGINE
+// (V7.0 - FULL PERSISTENCE / AUTO-POPULATE / PER-CLIENT ISOLATION / DUAL-KEY PAYLOADS)
 // ==========================================
 
 window.CONFIG = window.CONFIG || {
@@ -325,6 +326,11 @@ window.filterProperties = function(query) {
 // جلب بيانات العميل والعناصر من n8n / Airtable
 // ==========================================
 async function fetchAllClientData() {
+  if (!currentClient || !currentClient.whatsapp) {
+    console.warn('⚠️ لا يمكن جلب البيانات بدون رقم واتساب العميل');
+    return;
+  }
+
   try {
     const res = await fetch(window.CONFIG.WEBHOOK_URL, {
       method: 'POST',
@@ -468,28 +474,81 @@ function updateSubscriptionStats(client) {
 }
 
 // ==========================================
-// تعبئة نماذج الإعدادات ببيانات Airtable الحقيقية
+// تعبئة نماذج الإعدادات تلقائياً (Auto-Populate) بكل البيانات المحفوظة
+// لهذا العميل بالذات (client_whatsapp) - أي حقل اتحفظ قبل كده لازم يظهر ثابت هنا
 // ==========================================
 function populateDashboardFields(client) {
+  // ---------- الهوية والبيانات العامة ----------
   setVal('setting-agency-name', client.Company_Name);
   setVal('setting-color', client.Theme_Color || '#0284c7');
-  setVal('hero-title', client.Slogan);
+  setVal('setting-accent-color', client.Accent_Color);
+  injectImagePreview('setting-logo', client.Logo_URL, 'setting-logo-name');
+  injectImagePreview('setting-favicon', client.Favicon_URL, 'setting-favicon-name');
 
+  // ---------- محتوى الصفحة الرئيسية ----------
+  setVal('hero-title', client.Slogan || client.Hero_Title);
+  setVal('hero-subtitle', client.Hero_Subtitle);
+  setVal('about-exp', client.About_Exp || client.Experience_Stat);
+  setVal('about-satisfaction', client.About_Satisfaction || client.Satisfaction_Stat);
+
+  // ---------- SEO ----------
   const seoDescRaw = client['\u2060SEO_Description\u2060'] || client['SEO_Description'] || '';
   setVal('seo-title', client.SEO_Title);
   setVal('seo-desc', seoDescRaw);
 
+  // ---------- وسائل التواصل والموقع ----------
   setVal('social-whatsapp', client.Whatsapp);
+  setVal('social-phone', client.Phone);
+  setVal('social-maps', client.Maps_Link || client.Google_Maps);
   setVal('social-facebook', client.Facebook);
   setVal('social-instagram', client.Instagram);
 
+  // ---------- الدومين المخصص ----------
+  setVal('custom-domain-input', client.Custom_Domain);
+
+  // ---------- التسويق والبيكسل ----------
   setVal('mkt-meta', client.Meta_Pixel_ID);
+  setVal('mkt-tiktok', client.TikTok_Pixel_ID || client.TikTok);
+  setVal('mkt-snapchat', client.Snapchat_Pixel_ID);
+  setVal('mkt-ga4', client.GA4_ID);
 }
 
 function setVal(elementId, value) {
   const el = document.getElementById(elementId);
   if (el && value !== undefined && value !== null && value !== '') {
     el.value = value;
+  }
+}
+
+// ==========================================
+// إظهار معاينة ثابتة لصورة محفوظة مسبقاً (لوجو / فافيكون) داخل الـ dropzone
+// حتى يشوف العميل إن صورته فعلاً محفوظة وثابتة له دون الحاجة لرفعها كل مرة
+// ==========================================
+function injectImagePreview(fileInputId, imageUrl, nameLabelId) {
+  const fileInput = document.getElementById(fileInputId);
+  if (!fileInput) return;
+  const dropzone = fileInput.previousElementSibling;
+  if (!dropzone || !dropzone.classList.contains('dropzone-box')) return;
+
+  let previewImg = document.getElementById(fileInputId + '-preview');
+
+  if (!imageUrl || typeof imageUrl !== 'string' || !imageUrl.startsWith('http')) {
+    if (previewImg) previewImg.classList.add('hidden');
+    return;
+  }
+
+  if (!previewImg) {
+    previewImg = document.createElement('img');
+    previewImg.id = fileInputId + '-preview';
+    previewImg.className = 'w-14 h-14 object-cover rounded-xl border border-slate-200 dark:border-slate-700 mb-2';
+    dropzone.insertBefore(previewImg, dropzone.firstChild);
+  }
+  previewImg.src = imageUrl;
+  previewImg.classList.remove('hidden');
+
+  const nameLabel = document.getElementById(nameLabelId);
+  if (nameLabel && !nameLabel.textContent) {
+    nameLabel.textContent = 'محفوظة حالياً ✓';
   }
 }
 
@@ -564,24 +623,43 @@ window.removeImage = function(index, event) {
 // ==========================================
 async function handleAddItem(e) {
   if (e) e.preventDefault();
+
+  if (!currentClient || !currentClient.whatsapp) {
+    alert('❌ تعذر تحديد رقم العميل، برجاء إعادة تحميل الصفحة');
+    return;
+  }
+
   const title = document.getElementById('item-title')?.value.trim();
   if (!title) return alert('يرجى كتابة الاسم/العنوان');
+
+  const price = document.getElementById('item-price')?.value || 0;
+  const category = document.getElementById('item-category')?.value || 'عام';
+  const description = document.getElementById('item-desc')?.value || '';
 
   const imagesArray = uploadedImages.map(img => ({
     name: img.file.name,
     data: img.url
   }));
+  const heroImageBase64 = uploadedImages[heroImageIndex]?.url || '';
 
   const payload = {
     action: 'add_item',
     client_whatsapp: currentClient.whatsapp,
     sector: currentClient.sector,
+    // أسماء أعمدة Airtable الحقيقية (PascalCase)
     Item_Title: title,
-    Price: document.getElementById('item-price')?.value || 0,
-    Item_Category: document.getElementById('item-category')?.value || 'عام',
-    Description: document.getElementById('item-desc')?.value || '',
+    Price: price,
+    Item_Category: category,
+    Description: description,
+    Attachments: imagesArray,
+    // نسخة مطابقة بصيغة snake_case لضمان توافق أي workflow في n8n يستخدم مسميات مختلفة
+    title: title,
+    price: price,
+    category: category,
+    description: description,
     images: imagesArray,
-    hero_image_url: uploadedImages[heroImageIndex]?.url || ''
+    hero_image_url: heroImageBase64,
+    hero_image_base64: heroImageBase64
   };
 
   try {
@@ -620,9 +698,20 @@ function renderItemsTable(itemsToRender) {
     return;
   }
 
-  tableBody.innerHTML = items.map((item, idx) => `
+  tableBody.innerHTML = items.map((item, idx) => {
+    const imgUrl = getItemImageUrl(item);
+    const thumbHtml = imgUrl
+      ? `<img src="${escapeHtml(imgUrl)}" class="w-9 h-9 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0" />`
+      : `<span class="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 shrink-0"><i data-lucide="image" class="w-4 h-4"></i></span>`;
+
+    return `
     <tr class="border-b border-slate-100 dark:border-slate-800 text-xs hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
-      <td class="p-4 font-bold text-slate-800 dark:text-slate-200">${escapeHtml(item.Item_Title || '-')}</td>
+      <td class="p-4 font-bold text-slate-800 dark:text-slate-200">
+        <div class="flex items-center gap-3">
+          ${thumbHtml}
+          <span>${escapeHtml(item.Item_Title || '-')}</span>
+        </div>
+      </td>
       <td class="p-4 text-blue-600 dark:text-blue-400 font-bold">${formatPrice(item.Price)}</td>
       <td class="p-4"><span class="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-600 dark:text-slate-300">${escapeHtml(item.Item_Category || 'عام')}</span></td>
       <td class="p-4 text-slate-500 dark:text-slate-400 max-w-xs truncate">${escapeHtml(item.Description || '-')}</td>
@@ -630,9 +719,37 @@ function renderItemsTable(itemsToRender) {
         <button onclick="deleteItem('${item.id || item.record_id || idx}')" class="text-red-500 hover:text-red-700 font-bold transition">حذف</button>
       </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 
   if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// يحاول استخراج رابط صورة العنصر من كل الأسماء المحتملة اللي ممكن يرجعها Airtable/n8n
+function getItemImageUrl(item) {
+  if (item.hero_image_url && typeof item.hero_image_url === 'string') return item.hero_image_url;
+
+  if (item.Cloudinary_Images) {
+    if (Array.isArray(item.Cloudinary_Images)) {
+      const first = item.Cloudinary_Images[0];
+      if (typeof first === 'string') return first;
+      if (first && first.url) return first.url;
+    } else if (typeof item.Cloudinary_Images === 'string') {
+      return item.Cloudinary_Images.split(',')[0].trim();
+    }
+  }
+
+  if (item.Attachments) {
+    if (Array.isArray(item.Attachments)) {
+      const first = item.Attachments[0];
+      if (typeof first === 'string') return first;
+      if (first && first.url) return first.url;
+    } else if (typeof item.Attachments === 'string') {
+      return item.Attachments.split(',')[0].trim();
+    }
+  }
+
+  return '';
 }
 
 function formatPrice(rawPrice) {
@@ -657,6 +774,10 @@ function escapeHtml(text) {
 // حذف عنصر
 // ==========================================
 window.deleteItem = async function(itemId) {
+  if (!currentClient || !currentClient.whatsapp) {
+    alert('❌ تعذر تحديد رقم العميل، برجاء إعادة تحميل الصفحة');
+    return;
+  }
   if (!confirm('هل أنت متأكد من حذف هذا العنصر نهائياً؟')) return;
 
   try {
@@ -666,6 +787,7 @@ window.deleteItem = async function(itemId) {
       body: JSON.stringify({
         action: 'delete_item',
         item_id: itemId,
+        record_id: itemId,
         client_whatsapp: currentClient.whatsapp
       })
     });
@@ -765,6 +887,12 @@ function getBase64(file) {
 }
 
 async function sendDataToN8n(payload, messageEl) {
+  if (!currentClient || !currentClient.whatsapp) {
+    showFormMessage(messageEl, '❌ تعذر تحديد رقم العميل، برجاء إعادة تحميل الصفحة', false);
+    return;
+  }
+  payload.client_whatsapp = currentClient.whatsapp;
+
   try {
     const res = await fetch(window.CONFIG.WEBHOOK_URL, {
       method: 'POST',
@@ -810,15 +938,34 @@ async function handleSettingsSubmit(e) {
     faviconBase64 = await getBase64(faviconInput.files[0]);
   }
 
+  const companyName = document.getElementById('setting-agency-name')?.value || '';
+  const themeColor = document.getElementById('setting-color')?.value || '';
+  const accentColor = document.getElementById('setting-accent-color')?.value || '';
+
   const payload = {
     action: 'update_settings',
     client_whatsapp: currentClient.whatsapp,
-    Company_Name: document.getElementById('setting-agency-name')?.value,
-    Theme_Color: document.getElementById('setting-color')?.value,
-    accent_color: document.getElementById('setting-accent-color')?.value,
-    Logo_URL: logoBase64,
-    Favicon_URL: faviconBase64
+    // Airtable field names
+    Company_Name: companyName,
+    Theme_Color: themeColor,
+    Accent_Color: accentColor,
+    // snake_case fallback
+    company_name: companyName,
+    primary_color: themeColor,
+    accent_color: accentColor
   };
+
+  // لا نبعت مفتاح الصورة أصلاً إلا لو العميل رفع صورة جديدة فعلياً
+  // عشان السيرفر ميمسحش اللوجو/الفافيكون المحفوظين له لو سايب الحقل فاضي
+  if (logoBase64) {
+    payload.Logo_URL = logoBase64;
+    payload.logo_base64 = logoBase64;
+  }
+  if (faviconBase64) {
+    payload.Favicon_URL = faviconBase64;
+    payload.favicon_base64 = faviconBase64;
+  }
+
   await sendDataToN8n(payload, 'settings-msg');
 }
 
@@ -827,14 +974,28 @@ async function handleSettingsSubmit(e) {
 // ==========================================
 async function handleSocialSubmit(e) {
   e.preventDefault();
+
+  const whatsapp = document.getElementById('social-whatsapp')?.value || '';
+  const phone = document.getElementById('social-phone')?.value || '';
+  const maps = document.getElementById('social-maps')?.value || '';
+  const facebook = document.getElementById('social-facebook')?.value || '';
+  const instagram = document.getElementById('social-instagram')?.value || '';
+
   const payload = {
     action: 'update_social',
     client_whatsapp: currentClient.whatsapp,
-    Whatsapp: document.getElementById('social-whatsapp')?.value,
-    phone: document.getElementById('social-phone')?.value,
-    maps: document.getElementById('social-maps')?.value,
-    Facebook: document.getElementById('social-facebook')?.value,
-    Instagram: document.getElementById('social-instagram')?.value
+    // Airtable field names
+    Whatsapp: whatsapp,
+    Phone: phone,
+    Maps_Link: maps,
+    Facebook: facebook,
+    Instagram: instagram,
+    // snake_case fallback
+    whatsapp: whatsapp,
+    phone: phone,
+    maps: maps,
+    facebook: facebook,
+    instagram: instagram
   };
   await sendDataToN8n(payload, 'social-msg');
 }
@@ -844,11 +1005,20 @@ async function handleSocialSubmit(e) {
 // ==========================================
 async function handleSeoSubmit(e) {
   e.preventDefault();
+
+  const seoTitle = document.getElementById('seo-title')?.value || '';
+  const seoDesc = document.getElementById('seo-desc')?.value || '';
+
   const payload = {
     action: 'update_seo',
     client_whatsapp: currentClient.whatsapp,
-    SEO_Title: document.getElementById('seo-title')?.value,
-    SEO_Description: document.getElementById('seo-desc')?.value
+    // Airtable field names (بما فيهم النسخة اللي فيها Word Joiner المخفي حول الاسم)
+    SEO_Title: seoTitle,
+    SEO_Description: seoDesc,
+    '\u2060SEO_Description\u2060': seoDesc,
+    // snake_case fallback
+    seo_title: seoTitle,
+    seo_desc: seoDesc
   };
   await sendDataToN8n(payload, 'seo-msg');
 }
@@ -858,13 +1028,25 @@ async function handleSeoSubmit(e) {
 // ==========================================
 async function handleMarketingSubmit(e) {
   e.preventDefault();
+
+  const metaPixel = document.getElementById('mkt-meta')?.value || '';
+  const tiktokPixel = document.getElementById('mkt-tiktok')?.value || '';
+  const snapPixel = document.getElementById('mkt-snapchat')?.value || '';
+  const ga4Id = document.getElementById('mkt-ga4')?.value || '';
+
   const payload = {
     action: 'update_marketing',
     client_whatsapp: currentClient.whatsapp,
-    Meta_Pixel_ID: document.getElementById('mkt-meta')?.value,
-    tiktok_pixel: document.getElementById('mkt-tiktok')?.value,
-    snapchat_pixel: document.getElementById('mkt-snapchat')?.value,
-    ga4_id: document.getElementById('mkt-ga4')?.value
+    // Airtable field names
+    Meta_Pixel_ID: metaPixel,
+    TikTok_Pixel_ID: tiktokPixel,
+    Snapchat_Pixel_ID: snapPixel,
+    GA4_ID: ga4Id,
+    // snake_case fallback
+    meta_pixel: metaPixel,
+    tiktok_pixel: tiktokPixel,
+    snapchat_pixel: snapPixel,
+    ga4_id: ga4Id
   };
   await sendDataToN8n(payload, 'marketing-msg');
 }
@@ -874,10 +1056,14 @@ async function handleMarketingSubmit(e) {
 // ==========================================
 async function handleDomainSubmit(e) {
   e.preventDefault();
+
+  const domain = document.getElementById('custom-domain-input')?.value || '';
+
   const payload = {
     action: 'update_domain',
     client_whatsapp: currentClient.whatsapp,
-    custom_domain: document.getElementById('custom-domain-input')?.value
+    Custom_Domain: domain,
+    custom_domain: domain
   };
   await sendDataToN8n(payload, 'domain-msg');
 }
@@ -887,13 +1073,26 @@ async function handleDomainSubmit(e) {
 // ==========================================
 async function handleContentSubmit(e) {
   e.preventDefault();
+
+  const heroTitle = document.getElementById('hero-title')?.value || '';
+  const heroSubtitle = document.getElementById('hero-subtitle')?.value || '';
+  const aboutExp = document.getElementById('about-exp')?.value || '';
+  const aboutSatisfaction = document.getElementById('about-satisfaction')?.value || '';
+
   const payload = {
     action: 'update_content',
     client_whatsapp: currentClient.whatsapp,
-    Slogan: document.getElementById('hero-title')?.value,
-    hero_subtitle: document.getElementById('hero-subtitle')?.value,
-    about_exp: document.getElementById('about-exp')?.value,
-    about_satisfaction: document.getElementById('about-satisfaction')?.value
+    // Airtable field names
+    Slogan: heroTitle,
+    Hero_Title: heroTitle,
+    Hero_Subtitle: heroSubtitle,
+    About_Exp: aboutExp,
+    About_Satisfaction: aboutSatisfaction,
+    // snake_case fallback
+    hero_title: heroTitle,
+    hero_subtitle: heroSubtitle,
+    about_exp: aboutExp,
+    about_satisfaction: aboutSatisfaction
   };
   await sendDataToN8n(payload, 'content-msg');
 }
